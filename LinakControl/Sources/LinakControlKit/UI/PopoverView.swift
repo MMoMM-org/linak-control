@@ -22,6 +22,8 @@ public struct PopoverView: View {
     public var body: some View {
         if viewModel.isFirstRun {
             FirstRunView(viewModel: viewModel)
+        } else if viewModel.showSettings {
+            SettingsView(viewModel: viewModel)
         } else {
             VStack(spacing: 0) {
                 switch viewModel.connectionState {
@@ -49,7 +51,7 @@ private struct ConnectedContent: View {
             HeightHeroView(viewModel: viewModel)
             MovementControlView(viewModel: viewModel)
             PresetGridView(viewModel: viewModel)
-            FooterView()
+            FooterView(viewModel: viewModel)
         }
     }
 }
@@ -81,7 +83,7 @@ private struct DisconnectedContent: View {
 
             MovementControlView(viewModel: viewModel)
             PresetGridView(viewModel: viewModel)
-            FooterView()
+            FooterView(viewModel: viewModel)
         }
     }
 
@@ -127,7 +129,7 @@ private struct BusyContent: View {
 
             MovementControlView(viewModel: viewModel)
             PresetGridView(viewModel: viewModel)
-            FooterView()
+            FooterView(viewModel: viewModel)
         }
     }
 }
@@ -157,11 +159,13 @@ private struct HeightHeroView: View {
 // MARK: - FooterView
 
 private struct FooterView: View {
+    @ObservedObject var viewModel: DeskViewModel
+
     var body: some View {
         HStack {
             Spacer()
             Button {
-                // Settings — Phase 6
+                viewModel.showSettings = true
             } label: {
                 Image(systemName: "gearshape")
             }

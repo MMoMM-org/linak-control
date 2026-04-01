@@ -191,7 +191,62 @@ public final class DeskViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Settings actions
+
+    /// Updates the height display unit, recalculates `heightDisplay`, and persists to config.
+    public func updateUnit(_ newUnit: HeightUnit) {
+        unit = newUnit
+        heightDisplay = heightMM.map { HeightConverter.display(mm: $0, unit: newUnit) } ?? "—"
+        persistConfig { $0.unit = newUnit }
+    }
+
+    /// Updates the up-movement run mode and persists to config.
+    public func updateAutoRunUp(_ mode: RunMode) {
+        autoRunUp = mode
+        persistConfig { $0.autoRunUp = mode }
+    }
+
+    /// Updates the down-movement run mode and persists to config.
+    public func updateAutoRunDown(_ mode: RunMode) {
+        autoRunDown = mode
+        persistConfig { $0.autoRunDown = mode }
+    }
+
+    /// Updates the start-at-login setting and persists to config (no SMAppService side-effect).
+    ///
+    /// Use `setStartAtLogin(_:)` when SMAppService registration is also required.
+    public func updateStartAtLogin(_ enabled: Bool) {
+        startAtLogin = enabled
+        persistConfig { $0.startAtLogin = enabled }
+    }
+
+    /// Updates the global-hotkeys setting and persists to config.
+    public func updateHotkeysEnabled(_ enabled: Bool) {
+        hotkeysEnabled = enabled
+        persistConfig { $0.hotkeysEnabled = enabled }
+    }
+
+    /// Clears pairing info, disconnects from the desk, and resets to first-run state.
+    ///
+    /// The user will be taken back through the scanning flow on next interaction.
+    public func forgetAndRescan() {
+        persistConfig {
+            $0.pairedDeskUUID = nil
+            $0.pairedDeskName = nil
+        }
+        Task { await deskManager.disconnect() }
+        showSettings = false
+        isFirstRun = true
+    }
+
     // MARK: - Private
+
+    /// Loads config, applies a mutation, and saves it back to disk synchronously.
+    private func persistConfig(_ mutation: (inout AppConfig) -> Void) {
+        var config = (try? configStore.load()) ?? .default
+        mutation(&config)
+        try? configStore.save(config)
+    }
 
     private func startObservingStateStream() {
         // Capture manager strongly — the view model owns the subscription lifecycle.
