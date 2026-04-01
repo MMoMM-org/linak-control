@@ -161,3 +161,84 @@ final class FirstRunSelectDeskTests: XCTestCase {
         XCTAssertEqual(viewModel.connectionState, .disconnected)
     }
 }
+
+// MARK: - completeFirstRun
+
+private func makeHappyPathMock() -> MockBLEController {
+    let mock = MockBLEController()
+    mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+    mock.mockNotificationStreams[DeskUUID.dpg] = finiteStream(HandshakeFixtures.happyPathDPGResponses)
+    mock.mockNotificationStreams[DeskUUID.height] = finiteStream([HandshakeFixtures.heightNotification730mm])
+    return mock
+}
+
+private func finiteStream(_ values: [Data]) -> AsyncStream<Data> {
+    AsyncStream { continuation in
+        for value in values { continuation.yield(value) }
+        continuation.finish()
+    }
+}
+
+@MainActor
+final class FirstRunCompleteTests: XCTestCase {
+
+    func testCompleteFirstRunSavesPairingInfoToConfig() async throws {
+        let peripheralId = UUID()
+        let deskName = "LINAK DPG1C"
+        let desk = DiscoveredDesk(peripheralId: peripheralId, name: deskName, rssi: -55)
+
+        let mock = makeHappyPathMock()
+        let store = makeTempConfigStore()
+        let (manager, viewModel) = makeViewModel(mock: mock, store: store)
+
+        // Simulate first-run: select desk, wait for connection, then complete.
+        viewModel.selectDesk(desk)
+        try await manager.connect(peripheralId: peripheralId)
+
+        await waitFor { await MainActor.run { viewModel.connectionState == .connected } }
+
+        viewModel.completeFirstRun()
+        try await Task.sleep(for: .milliseconds(50))
+
+        let savedConfig = try store.load()
+        XCTAssertEqual(savedConfig.pairedDeskUUID, peripheralId.uuidString)
+        XCTAssertEqual(savedConfig.pairedDeskName, deskName)
+    }
+
+    func testCompleteFirstRunSetsIsFirstRunToFalse() async throws {
+        let peripheralId = UUID()
+        let desk = DiscoveredDesk(peripheralId: peripheralId, name: "LINAK DPG1C", rssi: -55)
+
+        let mock = makeHappyPathMock()
+        let store = makeTempConfigStore()
+        let (manager, viewModel) = makeViewModel(mock: mock, store: store)
+
+        viewModel.selectDesk(desk)
+        try await manager.connect(peripheralId: peripheralId)
+
+        await waitFor { await MainActor.run { viewModel.connectionState == .connected } }
+
+        XCTAssertTrue(viewModel.isFirstRun, "Should still be first-run before completing")
+        viewModel.completeFirstRun()
+
+        XCTAssertFalse(viewModel.isFirstRun, "isFirstRun must be false after completeFirstRun")
+    }
+
+    func testDeskNameIsPopulatedFromStateStreamAfterConnect() async throws {
+        let peripheralId = UUID()
+        let deskName = "LINAK DPG1C"
+        let desk = DiscoveredDesk(peripheralId: peripheralId, name: deskName, rssi: -55)
+
+        let mock = makeHappyPathMock()
+        // Pre-populate config with a desk name so DeskManager copies it to state.
+        let store = makeTempConfigStore(config: AppConfig(pairedDeskName: deskName))
+        let (manager, viewModel) = makeViewModel(mock: mock, store: store)
+
+        viewModel.selectDesk(desk)
+        try await manager.connect(peripheralId: peripheralId)
+
+        await waitFor { await MainActor.run { viewModel.deskName != nil } }
+
+        XCTAssertEqual(viewModel.deskName, deskName)
+    }
+}

@@ -19,7 +19,11 @@ public struct FirstRunView: View {
 
     public var body: some View {
         Group {
-            if viewModel.connectionState == .scanning || !viewModel.discoveredDesks.isEmpty {
+            if viewModel.connectionState == .connected {
+                FirstRunCompleteView(viewModel: viewModel)
+            } else if viewModel.connectionState == .connecting {
+                FirstRunConnectingView(viewModel: viewModel)
+            } else if viewModel.connectionState == .scanning || !viewModel.discoveredDesks.isEmpty {
                 FirstRunScanningView(viewModel: viewModel)
             } else {
                 FirstRunWelcomeView(viewModel: viewModel)
@@ -112,6 +116,74 @@ struct FirstRunScanningView: View {
                 }
                 Divider()
             }
+        }
+    }
+}
+
+// MARK: - FirstRunConnectingView
+
+/// Shown while the BLE connection and handshake are in progress.
+struct FirstRunConnectingView: View {
+
+    @ObservedObject var viewModel: DeskViewModel
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            ProgressView()
+                .controlSize(.large)
+
+            Text("Connecting to \(viewModel.selectedDeskName ?? "desk")…")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+
+            Spacer()
+        }
+    }
+}
+
+// MARK: - FirstRunCompleteView
+
+/// Shown after a successful connection. Lets the user confirm and dismiss first-run.
+struct FirstRunCompleteView: View {
+
+    @ObservedObject var viewModel: DeskViewModel
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 48))
+                .foregroundColor(.green)
+
+            VStack(spacing: 6) {
+                Text("Connected!")
+                    .font(.title2.weight(.semibold))
+
+                Text(viewModel.deskName ?? "Your desk")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+
+                Text("Current height: \(viewModel.heightDisplay)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            Text("Tip: Save your current position as a preset in Settings.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 8)
+
+            Button("Done") {
+                viewModel.completeFirstRun()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+
+            Spacer()
         }
     }
 }

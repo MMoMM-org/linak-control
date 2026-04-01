@@ -36,12 +36,23 @@ public final class DeskViewModel: ObservableObject {
     /// Desks discovered during an active BLE scan.
     @Published public var discoveredDesks: [DiscoveredDesk] = []
 
+    /// Name of the currently connected desk, populated from `DeskState` snapshots.
+    @Published public var deskName: String?
+
     // MARK: - Dependencies
 
     private let deskManager: DeskManager
     private let configStore: ConfigStore
     private var stateTask: Task<Void, Never>?
     private var scanTask: Task<Void, Never>?
+
+    /// Peripheral ID captured when the user selects a desk during first-run.
+    private var selectedPeripheralId: UUID?
+
+    /// Name of the desk selected during first-run scanning (before connection completes).
+    ///
+    /// Used by `FirstRunConnectingView` to show the desk name while the handshake runs.
+    @Published public var selectedDeskName: String?
 
     // MARK: - Init
 
@@ -98,9 +109,28 @@ public final class DeskViewModel: ObservableObject {
 
     /// Connects to a specific desk discovered during scanning.
     ///
+    /// Captures the desk's peripheral ID and name for use in `completeFirstRun()`.
     /// Fire-and-forget; errors are swallowed — connection state updates via `stateStream`.
     public func selectDesk(_ desk: DiscoveredDesk) {
+        selectedPeripheralId = desk.peripheralId
+        selectedDeskName = desk.name
         Task { try? await deskManager.connect(peripheralId: desk.peripheralId) }
+    }
+
+    /// Finalises the first-run pairing flow.
+    ///
+    /// Persists the selected desk's UUID and name to `ConfigStore`, then sets
+    /// `isFirstRun = false` so `PopoverView` transitions to the normal UI.
+    public func completeFirstRun() {
+        guard let peripheralId = selectedPeripheralId else { return }
+        let name = selectedDeskName
+        Task {
+            var config = (try? configStore.load()) ?? .default
+            config.pairedDeskUUID = peripheralId.uuidString
+            config.pairedDeskName = name
+            try? configStore.save(config)
+        }
+        isFirstRun = false
     }
 
     /// Attempts to reconnect to the paired desk stored in config.
@@ -142,5 +172,6 @@ public final class DeskViewModel: ObservableObject {
         presets = snapshot.presets
         activePreset = snapshot.activePreset
         targetPreset = snapshot.targetPreset
+        deskName = snapshot.deskName
     }
 }
