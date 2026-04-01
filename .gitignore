@@ -2,3 +2,12 @@ claude-docker-home/.home-initialized
 claude-docker-home/.claude.json
 claude-docker-home/.claude/
 claude-docker-home/.bash_history
+
+# Xcode user-specific data — project files are tracked, user state is not
+LinakControl.xcodeproj/xcuserdata/
+LinakControl.xcodeproj/project.xcworkspace/xcuserdata/
+LinakControl.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+LinakControl.xcworkspace/xcuserdata/
+# Xcode build intermediates at project root
+build/
+LinakControl/.build/

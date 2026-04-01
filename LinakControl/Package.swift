@@ -6,6 +6,10 @@ let package = Package(
     platforms: [
         .macOS(.v13)
     ],
+    products: [
+        // Expose the shared library so Xcode projects can link against it
+        .library(name: "LinakControlKit", targets: ["LinakControlKit"])
+    ],
     dependencies: [
         .package(
             url: "https://github.com/apple/swift-argument-parser.git",

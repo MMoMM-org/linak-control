@@ -12,31 +12,47 @@ CLI_BINARY    := deskctl
 INSTALL_BIN   ?= /usr/local/bin
 INSTALL_APP   ?= /Applications
 
-.PHONY: help build build-debug test install clean lint
+# Xcode project — produces a proper .app bundle required for BLE entitlements,
+# Info.plist embedding (LSUIElement, NSBluetoothAlwaysUsageDescription), and
+# SMAppService (login item) which all require a bundle identifier.
+XCODEPROJ     := LinakControl.xcodeproj
+XCODE_SCHEME  := LinakControlApp
+XCODE_BUILD   := $(shell xcodebuild -project $(XCODEPROJ) -scheme $(XCODE_SCHEME) -configuration Release -showBuildSettings 2>/dev/null | awk '/BUILT_PRODUCTS_DIR/{print $$3}')
+
+.PHONY: help build build-debug xcode-build xcode-build-debug generate-xcodeproj test install clean lint
 
 help: ## Show available targets
 	@printf "Usage: make <target>\n\n"
 	@printf "Targets:\n"
-	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ { printf "  %-14s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ { printf "  %-18s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
-build: ## Build both targets in release mode
+build: ## Build both targets in release mode (raw binaries via SPM)
 	cd $(SWIFT_PKG_DIR) && swift build -c release
 
-build-debug: ## Build both targets in debug mode
+build-debug: ## Build both targets in debug mode (raw binaries via SPM)
 	cd $(SWIFT_PKG_DIR) && swift build
+
+xcode-build: generate-xcodeproj ## Build LinakControl.app bundle in release mode via Xcode
+	xcodebuild -project $(XCODEPROJ) -scheme $(XCODE_SCHEME) -configuration Release build
+
+xcode-build-debug: generate-xcodeproj ## Build LinakControl.app bundle in debug mode via Xcode
+	xcodebuild -project $(XCODEPROJ) -scheme $(XCODE_SCHEME) -configuration Debug build
+
+generate-xcodeproj: ## Regenerate LinakControl.xcodeproj from project.yml (requires xcodegen)
+	@command -v xcodegen >/dev/null 2>&1 || (printf "xcodegen not found — run: brew install xcodegen\n" && exit 1)
+	xcodegen generate
 
 test: ## Run the test suite
 	cd $(SWIFT_PKG_DIR) && swift test
 
-install: build ## Install app and CLI binaries (set INSTALL_BIN / INSTALL_APP to override)
+install: build ## Install deskctl CLI binary (set INSTALL_BIN to override)
 	@printf "Installing $(CLI_BINARY) to $(INSTALL_BIN)/$(CLI_BINARY)\n"
 	install -m 755 $(RELEASE_DIR)/$(CLI_BINARY) $(INSTALL_BIN)/$(CLI_BINARY)
-	@printf "Installing $(APP_BINARY) to $(INSTALL_BIN)/$(APP_BINARY)\n"
-	install -m 755 $(RELEASE_DIR)/$(APP_BINARY) $(INSTALL_BIN)/$(APP_BINARY)
 	@printf "Done. Run '$(CLI_BINARY) --help' to verify.\n"
 
-clean: ## Remove build artifacts
+clean: ## Remove build artifacts (SPM and Xcode DerivedData)
 	cd $(SWIFT_PKG_DIR) && swift package clean
+	xcodebuild -project $(XCODEPROJ) -scheme $(XCODE_SCHEME) clean 2>/dev/null || true
 
 lint: ## Run SwiftLint if available
 	@if command -v swiftlint >/dev/null 2>&1; then \

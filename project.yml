@@ -1,0 +1,67 @@
+# xcodegen project spec — generates LinakControl.xcodeproj
+# Run: xcodegen generate from the repo root
+# Purpose: produce a .app bundle (SPM executable targets cannot produce .app bundles)
+
+name: LinakControl
+options:
+  bundleIdPrefix: com.marcusbreiden
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+  useBaseInternationalization: false
+  # Patch: xcodegen 2.x omits the `package` back-reference in XCSwiftPackageProductDependency
+  # for local packages. The sed command inserts it after generation so Xcode can resolve
+  # LinakControlKit from the local package.
+  postGenCommand: |
+    sed -i '' 's/isa = XCSwiftPackageProductDependency;$/isa = XCSwiftPackageProductDependency;\n\t\t\tpackage = 4EFDB7A01A97CE76F510C315 \/* XCLocalSwiftPackageReference "LinakControl" *\/;/' LinakControl.xcodeproj/project.pbxproj
+
+packages:
+  LinakControlKit:
+    path: LinakControl
+
+targets:
+  LinakControl:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: LinakControl/Sources/App
+        excludes:
+          - Info.plist
+    info:
+      path: LinakControl/Sources/App/Info.plist
+      properties:
+        LSUIElement: true
+        NSBluetoothAlwaysUsageDescription: "LinakControl needs Bluetooth to communicate with your LINAK standing desk."
+        CFBundleName: LinakControl
+        CFBundleIdentifier: com.marcusbreiden.LinakControl
+        CFBundleVersion: "1"
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleExecutable: "$(EXECUTABLE_NAME)"
+        CFBundlePackageType: APPL
+        NSPrincipalClass: NSApplication
+    dependencies:
+      - package: LinakControlKit
+        product: LinakControlKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.marcusbreiden.LinakControl
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        SWIFT_VERSION: "5.9"
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: ""
+        ENABLE_HARDENED_RUNTIME: NO
+        # Use the Info.plist from the SPM source tree — do not generate one
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: LinakControl/Sources/App/Info.plist
+
+schemes:
+  LinakControlApp:
+    build:
+      targets:
+        LinakControl: all
+    run:
+      config: Debug
+    archive:
+      config: Release
