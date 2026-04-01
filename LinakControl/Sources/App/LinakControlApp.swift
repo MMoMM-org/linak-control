@@ -1,3 +1,4 @@
+import LinakControlKit
 import SwiftUI
 
 @main

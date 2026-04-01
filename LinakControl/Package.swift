@@ -13,21 +13,31 @@ let package = Package(
         )
     ],
     targets: [
+        // Shared library — all BLE, Core, Config, IPC, Util logic
+        .target(
+            name: "LinakControlKit",
+            dependencies: [],
+            path: "Sources/LinakControlKit"
+        ),
+        // Menu bar app — thin @main entry point
         .executableTarget(
             name: "LinakControl",
-            dependencies: [],
+            dependencies: ["LinakControlKit"],
             path: "Sources/App"
         ),
+        // CLI tool
         .executableTarget(
             name: "deskctl",
             dependencies: [
+                "LinakControlKit",
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
             ],
             path: "Sources/deskctl"
         ),
+        // Tests
         .testTarget(
             name: "LinakControlTests",
-            dependencies: [],
+            dependencies: ["LinakControlKit"],
             path: "Tests/LinakControlTests"
         )
     ]
