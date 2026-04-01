@@ -1,2 +1,77 @@
 // DeskState.swift
 // LinakControl
+
+// MARK: - ConnectionState
+
+public enum ConnectionState: Equatable {
+    case disconnected
+    case scanning
+    case connecting
+    case connected
+    case busy
+}
+
+// MARK: - MoveDirection
+
+public enum MoveDirection {
+    case up
+    case down
+}
+
+// MARK: - PresetPosition
+
+public struct PresetPosition {
+    public let index: Int
+    public var heightMM: Int?
+    public var label: String?
+
+    public init(index: Int, heightMM: Int? = nil, label: String? = nil) {
+        self.index = index
+        self.heightMM = heightMM
+        self.label = label
+    }
+}
+
+// MARK: - DeskState
+
+public struct DeskState {
+    public var connectionState: ConnectionState
+    public var deskName: String?
+    public var heightMM: Int?
+    public var speedMMS: Int?
+    public var isMoving: Bool
+    public var moveDirection: MoveDirection?
+    public var targetPreset: Int?
+    public var presets: [PresetPosition]
+    public var activePreset: Int?
+
+    public init() {
+        connectionState = .disconnected
+        deskName = nil
+        heightMM = nil
+        speedMMS = nil
+        isMoving = false
+        moveDirection = nil
+        targetPreset = nil
+        presets = (1...4).map { PresetPosition(index: $0) }
+        activePreset = nil
+    }
+}
+
+// MARK: - Active Preset Detection
+
+private let presetMatchToleranceMM = 5
+
+/// Returns the index (1–4) of the preset whose height is within 5mm of `heightMM`,
+/// or nil if moving or no preset matches.
+/// When multiple presets match, the one with the lowest index is returned.
+public func activePreset(height heightMM: Int, presets: [PresetPosition], isMoving: Bool) -> Int? {
+    guard !isMoving else { return nil }
+    return presets
+        .filter { preset in
+            guard let presetHeight = preset.heightMM else { return false }
+            return abs(presetHeight - heightMM) <= presetMatchToleranceMM
+        }
+        .min(by: { $0.index < $1.index })
+        .map(\.index)
+}
