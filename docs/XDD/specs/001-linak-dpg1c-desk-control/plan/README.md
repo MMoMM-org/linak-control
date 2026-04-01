@@ -82,7 +82,7 @@ Each phase is defined in a separate file. Tasks follow red-green-refactor: **Pri
 - [x] [Phase 4: Menu Bar UI](phase-4.md)
 - [x] [Phase 5: CLI Tool (deskctl)](phase-5.md)
 - [x] [Phase 6: First-Run, Settings & Polish](phase-6.md)
-- [ ] [Phase 7: Integration & E2E Validation](phase-7.md)
+- [x] [Phase 7: Integration & E2E Validation](phase-7.md)
 
 ---
 
