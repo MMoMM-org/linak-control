@@ -1,6 +1,6 @@
 ---
 title: "Phase 3: IPC Layer"
-status: pending
+status: completed
 version: "1.0"
 phase: 3
 ---
@@ -29,7 +29,7 @@ phase: 3
 
 Establishes the IPC communication layer between the menu bar app and external CLI clients. After this phase, external processes can control the desk via Unix socket.
 
-- [ ] **T3.1 IPC Message Types** `[activity: domain-modeling]`
+- [x] **T3.1 IPC Message Types** `[activity: domain-modeling]`
 
   1. Prime: Read SDD IPC protocol specification `[ref: SDD/Interface Specifications/IPC Protocol]` `[ref: SDD/Interface Specifications/IPC Methods]`
   2. Test: `IPCRequest` encodes/decodes with id, method, params fields; `IPCResponse` encodes/decodes with id, result, error fields; `IPCEvent` encodes/decodes with event, data fields; `IPCError` encodes with code and message; all 8 methods serialize correctly; unknown methods produce error code 10
@@ -37,7 +37,7 @@ Establishes the IPC communication layer between the menu bar app and external CL
   4. Validate: Round-trip encode/decode tests for all message types; framing handles partial reads
   5. Success: All IPC message types match SDD specification `[ref: SDD/Interface Specifications/IPC Protocol]`
 
-- [ ] **T3.2 IPCServer** `[activity: build-feature]`
+- [x] **T3.2 IPCServer** `[activity: build-feature]`
 
   1. Prime: Read SDD IPC server role and CLI flow `[ref: SDD/Runtime View/Primary Flow: CLI Preset Command]` `[ref: SDD/Interface Specifications/IPC Error Codes]`
   2. Test: Server creates socket at `~/Library/Application Support/LinakControl/linakcontrol.sock`; startup checks for stale socket (try connect → unlink if ECONNREFUSED → bind); socket mode 0600, directory mode 0700; accepts client connections; routes `getStatus` to DeskManager and returns status JSON; routes `goPreset` with index param; returns error code 10 for unknown methods; handles client disconnect gracefully; cleans up socket on shutdown (atexit/signal handler); rejects payloads > 64KB
@@ -45,7 +45,7 @@ Establishes the IPC communication layer between the menu bar app and external CL
   4. Validate: Integration test: create socket, connect, send request, receive response; verify file permissions; multiple client test
   5. Success: CLI can query status and control desk via socket `[ref: PRD/Feature 6/AC-1,2,3]`; socket permissions are 0600 `[ref: SDD/Cross-Cutting Concepts/System-Wide Patterns/Security]`
 
-- [ ] **T3.3 IPCClient (CLI-only)** `[activity: build-feature]`
+- [x] **T3.3 IPCClient (CLI-only)** `[activity: build-feature]`
 
   1. Prime: Read SDD IPC protocol and error codes `[ref: SDD/Interface Specifications/IPC Protocol]` `[ref: SDD/Interface Specifications/IPC Error Codes]`
   2. Test: Client connects to socket path; sends length-prefixed JSON request; receives and decodes typed response; throws typed error on connection refused (maps to exit code 2); throws typed error on IPC error response (maps to correct exit code)
@@ -53,6 +53,6 @@ Establishes the IPC communication layer between the menu bar app and external CL
   4. Validate: Unit tests with mock socket; error mapping tests (ECONNREFUSED → code 2, ENOENT → code 2)
   5. Success: Client reliably communicates with server; errors map to correct exit codes `[ref: SDD/Interface Specifications/IPC Error Codes]` `[ref: PRD/Feature 6/AC-4,5]`
 
-- [ ] **T3.4 Phase Validation** `[activity: validate]`
+- [x] **T3.4 Phase Validation** `[activity: validate]`
 
   - Run all Phase 3 tests. Integration test: start IPCServer with mock DeskManager, connect IPCClient, send getStatus, verify response. Send goPreset, verify DeskManager called. Verify socket cleanup on server shutdown. Verify stale socket detection. SwiftLint clean.

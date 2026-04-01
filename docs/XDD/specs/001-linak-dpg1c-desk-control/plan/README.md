@@ -76,11 +76,11 @@ Each phase is defined in a separate file. Tasks follow red-green-refactor: **Pri
 
 > **Tracking Principle**: Track logical units that produce verifiable outcomes. The TDD cycle is the method, not separate tracked items.
 
-- [ ] [Phase 1: Project Foundation & BLE Protocol](phase-1.md)
-- [ ] [Phase 2: BLE Connection & Desk Management](phase-2.md)
-- [ ] [Phase 3: IPC Layer](phase-3.md)
-- [ ] [Phase 4: Menu Bar UI](phase-4.md)
-- [ ] [Phase 5: CLI Tool (deskctl)](phase-5.md)
+- [x] [Phase 1: Project Foundation & BLE Protocol](phase-1.md)
+- [x] [Phase 2: BLE Connection & Desk Management](phase-2.md)
+- [x] [Phase 3: IPC Layer](phase-3.md)
+- [x] [Phase 4: Menu Bar UI](phase-4.md)
+- [x] [Phase 5: CLI Tool (deskctl)](phase-5.md)
 - [ ] [Phase 6: First-Run, Settings & Polish](phase-6.md)
 - [ ] [Phase 7: Integration & E2E Validation](phase-7.md)
 
