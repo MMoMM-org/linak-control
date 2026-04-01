@@ -13,13 +13,20 @@ public actor DeskManager {
 
     // MARK: - Dependencies
 
-    private let bleController: any BLEControllerProtocol
-    private let configStore: ConfigStore
+    let bleController: any BLEControllerProtocol
+    let configStore: ConfigStore
+    let clock: any ClockProtocol
 
     // MARK: - State
 
-    private var state: DeskState
+    var state: DeskState
     private var heightNotificationTask: Task<Void, Never>?
+    var movementTask: Task<Void, Never>?
+    var presetMoveTask: Task<Void, Never>?
+    var reconnectionTask: Task<Void, Never>?
+    var heartbeatTask: Task<Void, Never>?
+    var lastUserAction: ContinuousClock.Instant?
+    var isUserInitiatedDisconnect: Bool = false
 
     // MARK: - State observation
 
@@ -30,9 +37,14 @@ public actor DeskManager {
 
     // MARK: - Init
 
-    public init(bleController: any BLEControllerProtocol, configStore: ConfigStore) {
+    public init(
+        bleController: any BLEControllerProtocol,
+        configStore: ConfigStore,
+        clock: any ClockProtocol = SystemClock()
+    ) {
         self.bleController = bleController
         self.configStore = configStore
+        self.clock = clock
         self.state = DeskState()
 
         var cont: AsyncStream<DeskState>.Continuation!
@@ -68,6 +80,7 @@ public actor DeskManager {
     /// - Parameter peripheralId: CoreBluetooth peripheral UUID from a scan result.
     /// - Throws: `BLEError` or `DeskError` on connection or handshake failure.
     public func connect(peripheralId: UUID) async throws {
+        isUserInitiatedDisconnect = false
         updateState { $0.connectionState = .connecting }
 
         do {
@@ -75,6 +88,7 @@ public actor DeskManager {
             let result = try await performHandshake(using: bleController)
             applyHandshakeResult(result, peripheralId: peripheralId)
             startHeightNotificationListener()
+            startHeartbeat()
         } catch {
             updateState { $0.connectionState = .disconnected }
             throw error
@@ -83,28 +97,34 @@ public actor DeskManager {
 
     /// Disconnects from the desk and resets state.
     ///
-    /// Cancels the height notification listener. Preset labels from config are preserved.
+    /// Cancels the height notification listener, heartbeat, and any pending reconnection.
+    /// Preset labels from config are preserved.
     public func disconnect() async {
+        isUserInitiatedDisconnect = true
         heightNotificationTask?.cancel()
         heightNotificationTask = nil
+        heartbeatTask?.cancel()
+        heartbeatTask = nil
+        reconnectionTask?.cancel()
+        reconnectionTask = nil
         bleController.disconnect()
         resetToDisconnected()
     }
 
-    // MARK: - Movement (stubs — implementation in T2.4)
+    // MARK: - Movement (implementation in DeskManager+Movement.swift)
 
     /// Moves the desk upward using the given run mode.
     ///
     /// - Throws: `DeskError.notConnected` if not currently connected.
     public func moveUp(mode: RunMode) async throws {
-        try requireConnected()
+        try await startMovement(.up, mode: mode)
     }
 
     /// Moves the desk downward using the given run mode.
     ///
     /// - Throws: `DeskError.notConnected` if not currently connected.
     public func moveDown(mode: RunMode) async throws {
-        try requireConnected()
+        try await startMovement(.down, mode: mode)
     }
 
     /// Stops all desk movement.
@@ -112,6 +132,12 @@ public actor DeskManager {
     /// - Throws: `DeskError.notConnected` if not currently connected.
     public func stop() async throws {
         try requireConnected()
+        await cancelMovementTask()
+        try await writeStopCommand()
+        updateState {
+            $0.isMoving = false
+            $0.moveDirection = nil
+        }
     }
 
     // MARK: - Presets (stubs — implementation in T2.5/T2.6)
@@ -127,9 +153,11 @@ public actor DeskManager {
     /// Saves the current desk height to a preset slot.
     ///
     /// - Parameter index: Preset slot number (1–4).
-    /// - Throws: `DeskError.notConnected` if not currently connected.
+    /// - Throws: `DeskError.notConnected` if not connected; `DeskError.presetNotSet`
+    ///   if the index is out of range or no current height is known.
     public func savePreset(index: Int) async throws {
         try requireConnected()
+        try await executeSavePreset(index: index)
     }
 
     // MARK: - Settings
@@ -151,7 +179,7 @@ public actor DeskManager {
 extension DeskManager {
 
     /// Applies a mutation closure to `state` and yields the updated snapshot.
-    private func updateState(_ mutation: (inout DeskState) -> Void) {
+    func updateState(_ mutation: (inout DeskState) -> Void) {
         mutation(&state)
         stateContinuation.yield(state)
     }
@@ -244,7 +272,7 @@ extension DeskManager {
     }
 
     /// Throws `DeskError.notConnected` unless the desk is currently connected.
-    private func requireConnected() throws {
+    func requireConnected() throws {
         guard state.connectionState == .connected else {
             throw DeskError.notConnected
         }
