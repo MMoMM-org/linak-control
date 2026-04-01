@@ -40,6 +40,7 @@ private func waitFor(
 }
 
 /// Convenience factory that shares one ConfigStore between DeskManager and DeskViewModel.
+@MainActor
 private func makeManagerAndViewModel(mock: MockBLEController) -> (DeskManager, DeskViewModel, ConfigStore) {
     let store = makeTempConfigStore()
     let manager = DeskManager(bleController: mock, configStore: store)

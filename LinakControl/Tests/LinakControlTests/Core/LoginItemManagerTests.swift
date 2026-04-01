@@ -38,6 +38,7 @@ private func makeTempConfigStore(config: AppConfig? = nil) -> ConfigStore {
     return store
 }
 
+@MainActor
 private func makeViewModel(
     store: ConfigStore,
     loginItemManager: LoginItemManaging = MockLoginItemManager()

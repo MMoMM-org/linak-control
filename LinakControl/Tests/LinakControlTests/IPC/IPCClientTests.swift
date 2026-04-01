@@ -33,7 +33,7 @@ private final class TestSocketServer {
 
         let bindResult = withUnsafePointer(to: &addr) { ptr in
             ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                bind(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+                Darwin.bind(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
             }
         }
         guard bindResult == 0 else { close(fd); throw TestServerError.bindFailed }
@@ -143,7 +143,7 @@ final class IPCClientErrorMappingTests: XCTestCase {
         }
         _ = withUnsafePointer(to: &addr) { ptr in
             ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                bind(tmpFD, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+                Darwin.bind(tmpFD, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
             }
         }
         close(tmpFD)

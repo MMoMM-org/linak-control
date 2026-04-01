@@ -113,6 +113,9 @@ final class DeskManagerReconnectionBackoffTests: XCTestCase {
 
         await manager.handleDisconnection()
 
+        // Allow the reconnection task to start and register its first clock.sleep.
+        try await Task.sleep(for: .milliseconds(50))
+
         // Attempt 1 — after 1s
         clock.advance(by: .seconds(1))
         try await Task.sleep(for: .milliseconds(50))
@@ -300,6 +303,9 @@ final class DeskManagerHeartbeatTests: XCTestCase {
         let manager = try await makeConnectedManager(mock: mock, clock: clock)
 
         mock.writtenData.removeAll()
+
+        // Allow the heartbeat task to register its clock.sleep before we advance time.
+        try await Task.sleep(for: .milliseconds(50))
 
         clock.advance(by: .seconds(1))
         try await Task.sleep(for: .milliseconds(50))

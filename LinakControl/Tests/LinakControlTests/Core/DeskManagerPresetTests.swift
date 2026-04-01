@@ -234,9 +234,15 @@ final class DeskManagerPresetCancellationTests: XCTestCase {
 
         // Start moving to preset 2 (1105mm) — must cancel the first
         let secondTask = Task { try await setup.manager.goToPreset(index: 2) }
-        try await Task.sleep(for: .milliseconds(150))
 
-        let switchedState = await setup.manager.currentState
+        // Poll until targetPreset updates to 2, giving the actor time to process the second call.
+        var switchedState = await setup.manager.currentState
+        for _ in 0..<20 {
+            if switchedState.targetPreset == 2 { break }
+            try await Task.sleep(for: .milliseconds(25))
+            switchedState = await setup.manager.currentState
+        }
+
         XCTAssertEqual(
             switchedState.targetPreset, 2,
             "Second goToPreset must cancel first and switch targetPreset to 2"

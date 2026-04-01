@@ -27,6 +27,9 @@ private func makeConnectedManagerForSave(
     let manager = DeskManager(bleController: mock, configStore: store)
     try await manager.connect(peripheralId: UUID())
 
+    // Clear writes accumulated during handshake so tests only see save-operation writes.
+    mock.writtenData.removeAll()
+
     // Replace the now-exhausted DPG stream with fresh responses for the save operation.
     mock.mockNotificationStreams[DeskUUID.dpg] = makeFiniteStream(responses: saveResponses)
 

@@ -114,26 +114,25 @@ final class HeightUpdateLatencyTests: XCTestCase {
         XCTAssertEqual(viewModel.heightMM, 730, "Precondition: initial height must be set")
 
         // Measure: emit notification → viewModel.heightMM reflects new value.
-        var measuredSeconds: Double = 0
-        measure {
-            let expectation = XCTestExpectation(description: "height propagates to viewModel")
+        // Use async await timing to avoid blocking the main actor during measurement,
+        // which would prevent @MainActor state propagation from completing.
+        let iterationCount = 10
+        var totalSeconds: Double = 0
+        for _ in 0..<iterationCount {
             let targetMM = 900
             let start = ContinuousClock.now
-
             heightCont.yield(makeHeightPacket(mm: targetMM))
+            await waitFor(timeout: 1.0) { viewModel.heightMM == targetMM }
+            let elapsed = ContinuousClock.now - start
+            totalSeconds += Double(elapsed.components.seconds) +
+                Double(elapsed.components.attoseconds) / 1e18
 
-            Task { @MainActor in
-                await waitFor(timeout: 1.0) { viewModel.heightMM == targetMM }
-                let elapsed = ContinuousClock.now - start
-                measuredSeconds = Double(elapsed.components.seconds) +
-                    Double(elapsed.components.attoseconds) / 1e18
-                expectation.fulfill()
-            }
-
-            wait(for: [expectation], timeout: 2.0)
+            // Reset for next iteration.
             heightCont.yield(makeHeightPacket(mm: 730))
+            await waitFor(timeout: 1.0) { viewModel.heightMM == 730 }
         }
 
+        let measuredSeconds = totalSeconds / Double(iterationCount)
         XCTAssertLessThan(
             measuredSeconds, 0.1,
             "Height update latency must be < 100ms, got \(measuredSeconds * 1000)ms"

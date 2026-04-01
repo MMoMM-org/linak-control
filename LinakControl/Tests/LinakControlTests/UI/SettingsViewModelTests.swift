@@ -16,6 +16,7 @@ private func makeTempConfigStore(config: AppConfig? = nil) -> ConfigStore {
     return store
 }
 
+@MainActor
 private func makeViewModel(mock: MockBLEController, store: ConfigStore) -> (DeskManager, DeskViewModel) {
     let manager = DeskManager(bleController: mock, configStore: store)
     let viewModel = DeskViewModel(deskManager: manager, configStore: store)

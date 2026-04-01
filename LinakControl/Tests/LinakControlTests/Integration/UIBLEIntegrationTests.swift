@@ -194,20 +194,27 @@ final class UIBLEConnectionStateTests: XCTestCase {
         // Start disconnected.
         XCTAssertEqual(viewModel.connectionState, .disconnected)
 
-        // Begin connecting — state must move through connecting before settling on connected.
+        // Begin connecting — observe state transitions via the stateStream, which yields
+        // both .connecting and .connected snapshots before we await managerConnectTask.
         var observedConnecting = false
-        let connectTask = Task {
-            // Observe the connecting transition on the stream before it reaches connected.
-            await waitFor(timeout: 0.5) {
-                await MainActor.run { viewModel.connectionState == .connecting }
-            }
-            observedConnecting = await MainActor.run { viewModel.connectionState == .connecting }
-        }
+        var stateIterator = await manager.stateStream.makeAsyncIterator()
 
         let managerConnectTask = Task { try await manager.connect(peripheralId: UUID()) }
+
+        // Read the first state snapshot from stateStream; DeskManager.connect() sets .connecting
+        // as its first action, so we collect snapshots until we see .connecting or .connected.
+        while let snapshot = await stateIterator.next() {
+            if snapshot.connectionState == .connecting {
+                observedConnecting = true
+                break
+            }
+            if snapshot.connectionState == .connected {
+                break
+            }
+        }
+
         heightCont.yield(makeHeightPacket(mm: 730))
         try await managerConnectTask.value
-        await connectTask.value
 
         // Connecting state must have been observed during the transition.
         XCTAssertTrue(observedConnecting, "connectionState must pass through .connecting before .connected")

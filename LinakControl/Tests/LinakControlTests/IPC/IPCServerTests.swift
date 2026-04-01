@@ -201,7 +201,7 @@ final class IPCServerLifecycleTests: XCTestCase {
         }
         _ = withUnsafePointer(to: &addr) { ptr in
             ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPtr in
-                bind(staleFD, sockaddrPtr, socklen_t(MemoryLayout<sockaddr_un>.size))
+                Darwin.bind(staleFD, sockaddrPtr, socklen_t(MemoryLayout<sockaddr_un>.size))
             }
         }
         close(staleFD) // Close without listen() — leaves a stale socket file.

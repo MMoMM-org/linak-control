@@ -16,6 +16,7 @@ private func makeTempConfigStore(config: AppConfig? = nil) -> ConfigStore {
     return store
 }
 
+@MainActor
 private func makeViewModel(mock: MockBLEController, store: ConfigStore) -> (DeskManager, DeskViewModel) {
     let manager = DeskManager(bleController: mock, configStore: store)
     let viewModel = DeskViewModel(deskManager: manager, configStore: store)
@@ -189,12 +190,10 @@ final class FirstRunCompleteTests: XCTestCase {
 
         let mock = makeHappyPathMock()
         let store = makeTempConfigStore()
-        let (manager, viewModel) = makeViewModel(mock: mock, store: store)
+        let (_, viewModel) = makeViewModel(mock: mock, store: store)
 
-        // Simulate first-run: select desk, wait for connection, then complete.
+        // selectDesk fires a task that calls manager.connect; wait for it to complete.
         viewModel.selectDesk(desk)
-        try await manager.connect(peripheralId: peripheralId)
-
         await waitFor { await MainActor.run { viewModel.connectionState == .connected } }
 
         viewModel.completeFirstRun()
@@ -211,11 +210,10 @@ final class FirstRunCompleteTests: XCTestCase {
 
         let mock = makeHappyPathMock()
         let store = makeTempConfigStore()
-        let (manager, viewModel) = makeViewModel(mock: mock, store: store)
+        let (_, viewModel) = makeViewModel(mock: mock, store: store)
 
+        // selectDesk fires a task that calls manager.connect; wait for it to complete.
         viewModel.selectDesk(desk)
-        try await manager.connect(peripheralId: peripheralId)
-
         await waitFor { await MainActor.run { viewModel.connectionState == .connected } }
 
         XCTAssertTrue(viewModel.isFirstRun, "Should still be first-run before completing")
@@ -232,11 +230,10 @@ final class FirstRunCompleteTests: XCTestCase {
         let mock = makeHappyPathMock()
         // Pre-populate config with a desk name so DeskManager copies it to state.
         let store = makeTempConfigStore(config: AppConfig(pairedDeskName: deskName))
-        let (manager, viewModel) = makeViewModel(mock: mock, store: store)
+        let (_, viewModel) = makeViewModel(mock: mock, store: store)
 
+        // selectDesk fires a task that calls manager.connect; wait for it to complete.
         viewModel.selectDesk(desk)
-        try await manager.connect(peripheralId: peripheralId)
-
         await waitFor { await MainActor.run { viewModel.deskName != nil } }
 
         XCTAssertEqual(viewModel.deskName, deskName)

@@ -250,6 +250,9 @@ final class ReconnectionMultipleFailuresIntegrationTests: XCTestCase {
 
         await manager.handleDisconnection()
 
+        // Allow the reconnection task to start and register its first clock.sleep.
+        try await Task.sleep(for: .milliseconds(50))
+
         // Fail attempt 1 — backoff 1s
         clock.advance(by: .seconds(1))
         try await Task.sleep(for: .milliseconds(50))
