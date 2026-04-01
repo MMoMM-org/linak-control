@@ -1,0 +1,10 @@
+{
+  "template_version": "1",
+  "REPO_NAME": "linak-control",
+  "REPO_NAME_LOWER": "linak-control",
+  "REPO_MOUNT_PATH": "/Volumes/Moon/Coding/linak-control",
+  "INSTALL_DATE": "2026-04-01",
+  "CONFIG_VARIANT": "secure",
+  "IMAGE_NAME": "claude-code-secure",
+  "CONTAINER_NAME": "claude-linak-control"
+}
