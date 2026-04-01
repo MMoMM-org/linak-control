@@ -25,7 +25,7 @@ extension DeskManager {
     func executeGoToPreset(index: Int) async throws {
         try requireConnected()
 
-        let targetMM = try resolvePresetHeight(index: index)
+        let targetMM = try resolvePresetHeight(index)
         try guardHeightInRange(targetMM)
 
         cancelPresetMoveTask()

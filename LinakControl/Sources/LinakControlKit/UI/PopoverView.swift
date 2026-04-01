@@ -20,18 +20,22 @@ public struct PopoverView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            switch viewModel.connectionState {
-            case .connected:
-                ConnectedContent(viewModel: viewModel)
-            case .busy:
-                BusyContent(viewModel: viewModel)
-            case .disconnected, .scanning, .connecting:
-                DisconnectedContent(viewModel: viewModel)
+        if viewModel.isFirstRun {
+            FirstRunView(viewModel: viewModel)
+        } else {
+            VStack(spacing: 0) {
+                switch viewModel.connectionState {
+                case .connected:
+                    ConnectedContent(viewModel: viewModel)
+                case .busy:
+                    BusyContent(viewModel: viewModel)
+                case .disconnected, .scanning, .connecting:
+                    DisconnectedContent(viewModel: viewModel)
+                }
             }
+            .frame(width: 280)
+            .padding()
         }
-        .frame(width: 280)
-        .padding()
     }
 }
 

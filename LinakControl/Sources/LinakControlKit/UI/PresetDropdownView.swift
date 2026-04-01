@@ -18,6 +18,7 @@ public enum PresetDropdownView {
     ///
     /// - Parameter viewModel: Source of preset and connection state.
     /// - Returns: A configured `NSMenu` ready to display.
+    @MainActor
     public static func build(from viewModel: DeskViewModel, target: AnyObject?, action: Selector) -> NSMenu {
         let menu = NSMenu()
         for preset in viewModel.presets {
@@ -28,6 +29,7 @@ public enum PresetDropdownView {
 
     // MARK: - Private
 
+    @MainActor
     private static func item(
         for preset: PresetPosition,
         viewModel: DeskViewModel,
