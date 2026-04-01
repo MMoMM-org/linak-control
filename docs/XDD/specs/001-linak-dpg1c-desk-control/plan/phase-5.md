@@ -84,9 +84,9 @@ Builds the complete `deskctl` CLI tool. After this phase, all desk operations ar
 - [ ] **T5.7 Error Formatting** `[activity: build-feature]`
 
   1. Prime: Read PRD structured error requirements `[ref: PRD/Feature 14]` `[ref: SDD/Interface Specifications/IPC Error Codes]`
-  2. Test: All errors print to stderr. `--json` flag on any command outputs JSON errors: `{"error": "CODE", "message": "..."}`. Exit codes match SDD table (0=success, 1=general, 2=daemon not running, 3=not connected, 4=permission, 5=timeout). Plain text errors are actionable (e.g., "error: daemon not running — start DeskControl.app first").
-  3. Implement: Create `Sources/deskctl/Formatters.swift` with `formatError(error:json:) -> (stderr: String, exitCode: Int32)`. Map IPCError codes to exit codes and messages.
-  4. Validate: Test all 5 exit codes with both plain and JSON output
+  2. Test: All errors print to stderr. `--json` flag on any command outputs JSON errors: `{"error": 3, "message": "desk not connected"}`. Exit codes match SDD table (0=success, 1=general, 2=daemon not running, 3=not connected, 5=timeout). Plain text errors are actionable (e.g., "error: daemon not running — start LinakControl.app first").
+  3. Implement: Create `Sources/deskctl/Formatters.swift` with `formatError(error:json:) -> (stderr: String, exitCode: Int32)`. Map IPCError codes to exit codes and messages. JSON errors use `{"error": <code>, "message": "<text>"}` format to stderr.
+  4. Validate: Test all 4 exit codes (1, 2, 3, 5) with both plain and JSON output
   5. Success: Consistent exit codes and structured JSON errors `[ref: PRD/Feature 14/AC-1,2]`
 
 - [ ] **T5.8 Phase Validation** `[activity: validate]`

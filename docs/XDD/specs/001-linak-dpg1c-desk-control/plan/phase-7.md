@@ -40,8 +40,8 @@ Validates the complete system end-to-end. Covers integration testing, performanc
 - [ ] **T7.2 Integration Test: CLI ↔ IPC ↔ BLE Flow** `[activity: validate]`
 
   1. Prime: Read SDD CLI flow `[ref: SDD/Runtime View/Primary Flow: CLI Preset Command]`
-  2. Test: Start app with mock BLE and real IPCServer. Run `deskctl status` → receives correct JSON. Run `deskctl preset 2` → DeskManager receives goToPreset(2). Run `deskctl height --json` → valid JSON with correct fields. Run `deskctl` when daemon not running → exit code 2. Run `deskctl preset 1` when disconnected → exit code 3.
-  3. Implement: Process-level integration test: launch app process, run deskctl as subprocess, verify stdout/stderr and exit codes.
+  2. Test: Start app with `DESK_MOCK_BLE=1` env var (uses MockBLEController) and real IPCServer. Run `deskctl status` → receives correct JSON. Run `deskctl preset 2` → DeskManager receives goToPreset(2). Run `deskctl height --json` → valid JSON with correct fields. Run `deskctl` when daemon not running → exit code 2. Run `deskctl preset 1` when disconnected → exit code 3.
+  3. Implement: Process-level integration test: launch app process with mock BLE injection seam, run deskctl as subprocess, verify stdout/stderr and exit codes.
   4. Validate: All CLI commands produce correct output and exit codes
   5. Success: CLI controls desk through IPC pipeline `[ref: PRD/Feature 6/AC-1,2,3,4,5]` `[ref: PRD/Feature 14/AC-1,2]`
 
@@ -56,15 +56,15 @@ Validates the complete system end-to-end. Covers integration testing, performanc
 - [ ] **T7.4 Performance Verification** `[activity: validate]`
 
   1. Prime: Read SDD quality requirements `[ref: SDD/Quality Requirements]`
-  2. Test: Idle CPU < 0.1% (sample over 30 seconds via `top`). Idle memory < 20 MB RSS. Height update latency < 100ms (measure from mock BLE notification to UI property change). Preset move start < 1 second from goToPreset call to first BLE write. CLI command response < 500ms.
-  3. Implement: Performance tests using XCTest `measure {}` blocks. CPU sampling via `ProcessInfo`. Memory via `mach_task_basic_info`.
+  2. Test: Idle CPU < 0.1% (measured via `XCTMeasure` with `XCTCPUMetric()`). Idle memory < 20 MB RSS (via `mach_task_basic_info`). Height update latency < 100ms (measure from mock BLE notification to UI property change). Preset move start < 1 second from goToPreset call to first BLE write. CLI command response < 500ms.
+  3. Implement: Performance tests using `XCTest.measure(metrics: [XCTCPUMetric(), XCTMemoryMetric()])` for automated, repeatable assertions. No manual `top` sampling.
   4. Validate: All performance targets met; document actual measurements
   5. Success: All quality requirements within budget `[ref: SDD/Quality Requirements/Performance]` `[ref: PRD/Feature 2/AC-4]`
 
 - [ ] **T7.5 Build & Install Flow** `[activity: validate]`
 
   1. Prime: Read SDD deployment view `[ref: SDD/Deployment View]`
-  2. Test: `xcodebuild -scheme DeskControl -configuration Release CODE_SIGN_IDENTITY="-"` succeeds. App launches after `xattr -dr com.apple.quarantine`. `deskctl` binary runs standalone. Bluetooth permission dialog appears on first launch. Config directory created automatically.
+  2. Test: `xcodebuild -scheme LinakControl -configuration Release CODE_SIGN_IDENTITY="-"` succeeds. App launches after `xattr -dr com.apple.quarantine`. `deskctl` binary runs standalone. Bluetooth permission dialog appears on first launch. Config directory created automatically.
   3. Implement: Shell script or Makefile that builds both targets, copies to /Applications and /usr/local/bin, strips quarantine. Verify the full install flow.
   4. Validate: Clean build from scratch on a fresh checkout; verify all artifacts
   5. Success: Build-from-source install works for a new user following README `[ref: SDD/Deployment View/Build & Install]`
@@ -83,8 +83,8 @@ Validates the complete system end-to-end. Covers integration testing, performanc
     - [ ] Feature 5 (Presets): 5/5 AC verified `[ref: PRD/Feature 5]`
     - [ ] Feature 6 (CLI): 6/6 AC verified `[ref: PRD/Feature 6]`
     - [ ] Feature 7 (First-Run): 5/5 AC verified `[ref: PRD/Feature 7]`
-    - [ ] Feature 8 (Daemon Lifecycle): 4/4 AC verified `[ref: PRD/Feature 8]`
-    - [ ] Feature 9 (Settings): 4/4 AC verified `[ref: PRD/Feature 9]`
+    - [ ] Feature 8 (Daemon Lifecycle): 4/4 AC verified (note: AC-3 revised to login-item restart, not 5s crash recovery) `[ref: PRD/Feature 8]`
+    - [ ] Feature 9 (Settings): 4/4 AC verified (AC-3 cross-process sync tested: change unit via UI → verify deskctl status reflects new unit) `[ref: PRD/Feature 9]`
     - [ ] Feature 11 (Sleep/Wake Recovery): 2/2 AC verified `[ref: PRD/Feature 11]`
     - [ ] Feature 12 (Global Hotkeys): 2/2 AC verified `[ref: PRD/Feature 12]`
     - [ ] Feature 13 (Notifications): 2/2 AC verified `[ref: PRD/Feature 13]`

@@ -40,19 +40,19 @@ Establishes the IPC communication layer between the menu bar app and external CL
 - [ ] **T3.2 IPCServer** `[activity: build-feature]`
 
   1. Prime: Read SDD IPC server role and CLI flow `[ref: SDD/Runtime View/Primary Flow: CLI Preset Command]` `[ref: SDD/Interface Specifications/IPC Error Codes]`
-  2. Test: Server creates socket at `~/Library/Application Support/DeskControl/deskcontrol.sock` with mode 0600; accepts client connections; routes `getStatus` to DeskManager and returns status JSON; routes `goPreset` with index param; routes `subscribe` and pushes height events; returns error code 10 for unknown methods; handles client disconnect gracefully; supports multiple concurrent clients
-  3. Implement: Create `Sources/IPC/IPCServer.swift`. Use POSIX socket API (socket/bind/listen/accept) or NIO. Listen on AF_UNIX. Accept connections in a `Task`. Read length-prefixed messages. Route to DeskManager methods. Write responses. For `subscribe`, hold connection open and push events from DeskManager state stream.
+  2. Test: Server creates socket at `~/Library/Application Support/LinakControl/linakcontrol.sock`; startup checks for stale socket (try connect → unlink if ECONNREFUSED → bind); socket mode 0600, directory mode 0700; accepts client connections; routes `getStatus` to DeskManager and returns status JSON; routes `goPreset` with index param; returns error code 10 for unknown methods; handles client disconnect gracefully; cleans up socket on shutdown (atexit/signal handler); rejects payloads > 64KB
+  3. Implement: Create `Sources/IPC/IPCServer.swift`. Use POSIX socket API (socket/bind/listen/accept). Listen on AF_UNIX. Accept connections in a `Task`. Read length-prefixed messages (reject > 64KB). Route to DeskManager methods via typed IPCMethod enum. Write responses. Socket lifecycle: stale socket detection on startup, unlink on SIGTERM/SIGINT/atexit.
   4. Validate: Integration test: create socket, connect, send request, receive response; verify file permissions; multiple client test
   5. Success: CLI can query status and control desk via socket `[ref: PRD/Feature 6/AC-1,2,3]`; socket permissions are 0600 `[ref: SDD/Cross-Cutting Concepts/System-Wide Patterns/Security]`
 
-- [ ] **T3.3 IPCClient (Shared)** `[activity: build-feature]`
+- [ ] **T3.3 IPCClient (CLI-only)** `[activity: build-feature]`
 
   1. Prime: Read SDD IPC protocol and error codes `[ref: SDD/Interface Specifications/IPC Protocol]` `[ref: SDD/Interface Specifications/IPC Error Codes]`
-  2. Test: Client connects to socket path; sends length-prefixed JSON request; receives and decodes response; throws typed error on connection refused (maps to exit code 2); throws typed error on IPC error response (maps to correct exit code); `subscribe()` returns AsyncStream of events
-  3. Implement: Create `Sources/IPC/IPCClient.swift`. Shared between the CLI target and potentially the app (for internal testing). Methods: `send(_ request: IPCRequest) async throws -> IPCResponse`, `subscribe() -> AsyncStream<IPCEvent>`. Handle socket not found → `.daemonNotRunning` error.
+  2. Test: Client connects to socket path; sends length-prefixed JSON request; receives and decodes typed response; throws typed error on connection refused (maps to exit code 2); throws typed error on IPC error response (maps to correct exit code)
+  3. Implement: Create `Sources/deskctl/IPCClient.swift` (CLI target only — the app uses DeskManager directly, not IPC). Methods: `send(_ request: IPCRequest) async throws -> IPCResponse`. Handle socket not found → `.daemonNotRunning` error.
   4. Validate: Unit tests with mock socket; error mapping tests (ECONNREFUSED → code 2, ENOENT → code 2)
   5. Success: Client reliably communicates with server; errors map to correct exit codes `[ref: SDD/Interface Specifications/IPC Error Codes]` `[ref: PRD/Feature 6/AC-4,5]`
 
 - [ ] **T3.4 Phase Validation** `[activity: validate]`
 
-  - Run all Phase 3 tests. Integration test: start IPCServer with mock DeskManager, connect IPCClient, send getStatus, verify response. Send goPreset, verify DeskManager called. Subscribe and verify height events pushed. Verify socket cleanup on server shutdown. SwiftLint clean.
+  - Run all Phase 3 tests. Integration test: start IPCServer with mock DeskManager, connect IPCClient, send getStatus, verify response. Send goPreset, verify DeskManager called. Verify socket cleanup on server shutdown. Verify stale socket detection. SwiftLint clean.

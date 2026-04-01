@@ -31,6 +31,7 @@
 | 2026-04-01 | UI mockups created (mockups.md) | ASCII mockups for all screens: main popover, movement states, first-run flow, settings, CLI output, menu bar zones |
 | 2026-04-01 | SDD completed with 7 ADRs confirmed | ADR-1: single process, ADR-2: Unix socket IPC, ADR-3: Swift actor, ADR-4: HW presets as truth, ADR-5: SMAppService, ADR-6: two-zone menu bar (two NSStatusItems), ADR-7: no SPM package |
 | 2026-04-01 | Implementation plan completed | 7 phases, 43 tasks, phases 4+5 parallelizable, all 48 PRD acceptance criteria mapped to tasks |
+| 2026-04-01 | Post-review fixes applied (23 findings) | H1: crash restart → login-item restart; H2: conditional heartbeat (10 min idle); H3: profiles.json → config.json; H4: remove IPC subscribe; H5: add BLEControllerProtocol; M1: standardize on LinakControl; M2: CLI fire-and-forget; M3: typed IPC enums; M4: socket lifecycle; M5: remove getSettings/setSettings; +Clock injection, +64KB payload cap, +height bounds check |
 
 ## Context
 

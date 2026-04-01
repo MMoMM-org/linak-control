@@ -124,7 +124,7 @@ A lightweight, always-on macOS menu bar app and CLI tool that:
 - **Acceptance Criteria:**
   - [ ] Given the daemon is running and the desk is paired, When the Mac wakes from sleep, Then the daemon reconnects within 8 seconds automatically
   - [ ] Given the BLE connection drops unexpectedly, When the daemon detects the disconnection, Then it attempts to reconnect automatically with exponential backoff (1s, 2s, 4s, 8s, max 60s)
-  - [ ] Given the desk has entered sleep mode after inactivity, When a move command is issued, Then the daemon sends the wake-up sequence transparently and executes the command within 1.5 seconds total
+  - [ ] Given the desk has entered sleep mode after inactivity (heartbeat pauses after 10 minutes of no user interaction), When a move command is issued, Then the daemon sends the wake-up sequence transparently and executes the command within 1.5 seconds total
   - [ ] Given the daemon is running, When the user checks resource usage, Then CPU is below 0.1% at idle and memory is below 20 MB
 
 #### Feature 3: Menu Bar Status and Height Display
@@ -142,8 +142,8 @@ A lightweight, always-on macOS menu bar app and CLI tool that:
 - **Acceptance Criteria:**
   - [ ] Given the desk is connected and the popover is open, When the user holds the Up button for at least 150ms, Then the desk begins moving up within 500ms of the hold threshold
   - [ ] Given the desk is moving in manual (hold) mode, When the user releases the button, Then the desk stops within 500ms
-  - [ ] Given auto mode is configured for the up direction, When the user taps the Up button, Then the desk moves continuously until it reaches the travel limit or the user taps Stop
-  - [ ] Given the desk is moving in auto mode, When the user taps the active button again, Then the button shows a Stop icon and the desk stops within 500ms
+  - [ ] Given auto mode is configured for the up direction, When the user clicks the Up button, Then the desk moves continuously until it reaches the travel limit or the user clicks Stop
+  - [ ] Given the desk is moving in auto mode, When the user clicks the active button again, Then the button shows a Stop icon and the desk stops within 500ms
   - [ ] Given the desk is at maximum height, When the user presses Up, Then the Up button is dimmed and a tooltip shows "Desk is at maximum height"
 
 #### Feature 5: Preset Positions (1-4)
@@ -151,7 +151,7 @@ A lightweight, always-on macOS menu bar app and CLI tool that:
 - **User Story:** As Marcus, I want to recall saved desk positions with one tap so that I can switch between sitting and standing without manual adjustment.
 - **Acceptance Criteria:**
   - [ ] Given the popover is open, When preset buttons are displayed, Then each shows a label number and the stored height value (e.g., "1 / 73.0 cm")
-  - [ ] Given the user taps Preset 2, When the desk is connected, Then the desk begins moving to the stored position within 1 second
+  - [ ] Given the user clicks Preset 2, When the desk is connected, Then the desk begins moving to the stored position within 1 second
   - [ ] Given the desk reaches a preset position (within 5mm tolerance), When the height stabilizes, Then that preset button is visually highlighted as active
   - [ ] Given the desk is moved via physical controls away from a preset, When the height deviates by more than 5mm, Then all preset highlights clear on the next BLE update cycle
   - [ ] Given the user is in the settings panel, When they tap "Save current" on a preset slot, Then the current height is saved to that slot and confirmed
@@ -172,7 +172,7 @@ A lightweight, always-on macOS menu bar app and CLI tool that:
 - **User Story:** As Marcus launching the app for the first time, I want a guided setup flow so that I can pair my desk and start using it without reading documentation.
 - **Acceptance Criteria:**
   - [ ] Given the app is launched with no saved desk, When the popover opens, Then a welcome screen is shown with a "Get Started" button
-  - [ ] Given the user taps "Get Started", When BLE permission has not been granted, Then the macOS Bluetooth permission dialog appears with a clear usage description
+  - [ ] Given the user clicks "Get Started", When BLE permission has not been granted, Then the macOS Bluetooth permission dialog appears with a clear usage description
   - [ ] Given permission is granted, When scanning begins, Then found desks are shown with their name and signal strength
   - [ ] Given the user selects and connects a desk, When connection succeeds, Then a confirmation screen shows the current height and explains how to save presets
   - [ ] Given the user completes setup, When they tap "Done", Then the normal popover view is shown with live desk data
@@ -183,7 +183,7 @@ A lightweight, always-on macOS menu bar app and CLI tool that:
 - **Acceptance Criteria:**
   - [ ] Given the app is installed, When the user opts in to auto-start, Then the daemon registers as a login item and starts automatically on next login
   - [ ] Given the daemon is running, When the user runs `deskctl service status`, Then it reports "running" with uptime and connection state
-  - [ ] Given the daemon has crashed, When the system detects the process exited, Then it restarts automatically within 5 seconds
+  - [ ] Given the daemon has crashed, When the user logs in again, Then the app restarts automatically as a login item (note: if 5-second crash recovery becomes necessary, a LaunchAgent watchdog can be added later)
   - [ ] Given the user runs `deskctl service stop`, When the daemon receives the signal, Then it disconnects cleanly from BLE and exits with code 0
 
 #### Feature 9: Settings Configuration
@@ -201,7 +201,7 @@ A lightweight, always-on macOS menu bar app and CLI tool that:
 
 - **User Story:** As Marcus, I want to switch to a Guest profile so that someone else can use my desk with restricted permissions.
 - **Acceptance Criteria:**
-  - [ ] Given the popover bottom bar shows the active profile, When the user taps the profile selector, Then available profiles are shown in an inline picker
+  - [ ] Given the popover bottom bar shows the active profile, When the user clicks the profile selector, Then available profiles are shown in an inline picker
   - [ ] Given Guest profile is active, When the guest views the popover, Then settings and preset save options are hidden or disabled
   - [ ] Given Guest profile is active, When the guest views presets, Then only presets marked as "shared" by the owner are visible
 
@@ -247,7 +247,7 @@ A lightweight, always-on macOS menu bar app and CLI tool that:
 - **User Story:** As a Scripter, I want to control the desk from Shortcuts.app and AppleScript so that I can integrate it with broader macOS automation.
 - **Acceptance Criteria:**
   - [ ] Given the app exposes App Intents, When a Shortcuts automation triggers "Go to Desk Preset", Then the desk moves to the specified preset
-  - [ ] Given the app is AppleScript-enabled, When a script calls `tell application "DeskControl" to go preset 2`, Then the desk moves
+  - [ ] Given the app is AppleScript-enabled, When a script calls `tell application "LinakControl" to go preset 2`, Then the desk moves
 
 #### Feature 17: Height Event Streaming
 
@@ -272,7 +272,7 @@ A lightweight, always-on macOS menu bar app and CLI tool that:
 
 **User Flow:**
 1. User opens the popover and sees 4 preset buttons, each showing a number and height (e.g., "1 / 73.0 cm").
-2. User taps Preset 2 (110.5 cm). The button briefly animates to confirm the tap.
+2. User clicks Preset 2 (110.5 cm). The button briefly animates to confirm the tap.
 3. The desk begins moving. The height display at the top of the popover updates live (e.g., "74.2 cm... 85.1 cm... 110.5 cm").
 4. When the desk reaches the target (within 5mm tolerance), Preset 2 is highlighted as active.
 5. If the user later adjusts the desk via the physical panel, the highlight clears as soon as the height deviates by more than 5mm.
@@ -283,10 +283,11 @@ A lightweight, always-on macOS menu bar app and CLI tool that:
 - Rule 3: Saving a preset writes the current height to the desk firmware via BLE. The operation is confirmed by re-reading the preset height after the write.
 - Rule 4: A tolerance of 5mm is used for preset matching. Heights within this range are considered "at preset." This accounts for BLE measurement noise and minor mechanical variance.
 - Rule 5: During movement toward a preset, the active preset highlight does not appear until the desk stops and the height is within tolerance. This prevents premature highlighting during pass-through.
+- Rule 6: Preset recall is implemented by reading the preset's stored height and driving the desk to that height via continuous position updates (there is no single "go to preset N" BLE command). The app manages the control loop.
 
 **Edge Cases:**
 - Scenario 1: BLE disconnects during a preset move. -> Expected: Desk hardware stops the motor (built-in safety). App shows "Disconnected" and attempts reconnect. Does NOT auto-resume the interrupted move — user must re-trigger.
-- Scenario 2: User taps a different preset while the desk is already moving to Preset 2. -> Expected: New preset command is sent immediately, overriding the previous move. Desk changes direction if needed.
+- Scenario 2: User clicks a different preset while the desk is already moving to Preset 2. -> Expected: New preset command is sent immediately, overriding the previous move. Desk changes direction if needed.
 - Scenario 3: All 4 presets are unset (new desk, no presets saved). -> Expected: Each button shows "1 / —" with a dash for height. Tapping an unset preset shows "No height saved. Move the desk to a position and save it in Settings."
 - Scenario 4: Two presets have the same height value. -> Expected: Both are highlighted when the desk is at that height. This is valid (e.g., Preset 1 and Preset 3 both set to 73.0 cm for different contexts).
 - Scenario 5: Desk is at a preset height but was moved there manually, not via the app. -> Expected: The preset is still highlighted — matching is based on current height, not how the desk got there.
@@ -302,9 +303,9 @@ A lightweight, always-on macOS menu bar app and CLI tool that:
 4. User releases the button. The desk stops within 500ms.
 
 **User Flow (Auto Mode):**
-1. User taps the Up button.
+1. User clicks the Up button.
 2. The desk begins moving up continuously. The button transforms into a Stop icon.
-3. User taps the Stop button (same location). The desk stops.
+3. User clicks the Stop button (same location). The desk stops.
 4. Alternatively, the desk reaches its mechanical limit and stops automatically.
 
 **Business Rules:**

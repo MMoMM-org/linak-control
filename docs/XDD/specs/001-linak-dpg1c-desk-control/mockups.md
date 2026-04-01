@@ -233,7 +233,7 @@ During movement to Preset 1:
 ```
 ╭──────────────────────────────╮
 │                              │
-│      ╥  DeskControl          │
+│      ╥  LinakControl          │
 │                              │
 │   Control your LINAK desk    │
 │   from the menu bar.         │
@@ -343,7 +343,7 @@ During movement to Preset 1:
 │                              │
 ├──────────────────────────────┤
 │                              │
-│  About DeskControl v1.0      │
+│  About LinakControl v1.0      │
 │  ┌──────────────────┐       │
 │  │  Quit             │       │
 │  └──────────────────┘       │
@@ -358,7 +358,7 @@ During movement to Preset 1:
 ### `deskctl status`
 
 ```
-DeskControl Daemon
+LinakControl Daemon
   Status:     running (uptime: 2h 14m)
   Connection: connected
   Desk:       LINAK DPG1C
@@ -382,8 +382,9 @@ DeskControl Daemon
 
 ```
 Moving to preset 2 (110.5 cm)...
-Done.
 ```
+
+(Fire-and-forget — exits immediately after desk begins moving.)
 
 ### `deskctl service status`
 
@@ -447,4 +448,4 @@ Auto (Tap) Mode:
 
 6. **Settings as a separate "page"**: Navigates within the same popover (push/pop) rather than opening a separate window. Keeps everything in one place.
 
-7. **Profile selector**: Shown in the footer bar. For MVP (owner-only), this could just show "Marcus" without a switcher.
+7. **Profile selector**: For MVP, the footer shows a static owner name label (non-interactive). The profile switcher UI is deferred to v1.1 with Feature 10 (Owner/Guest Profiles).

@@ -55,17 +55,17 @@ version: "1.0"
 
 ```bash
 # Build
-xcodebuild -scheme DeskControl -configuration Debug
-xcodebuild -scheme DeskControl -configuration Release CODE_SIGN_IDENTITY="-"
+xcodebuild -scheme LinakControl -configuration Debug
+xcodebuild -scheme LinakControl -configuration Release CODE_SIGN_IDENTITY="-"
 
 # Test
-xcodebuild test -scheme DeskControl -destination 'platform=macOS'
+xcodebuild test -scheme LinakControl -destination 'platform=macOS'
 
 # Lint
 swiftlint
 
 # Run
-open build/Build/Products/Debug/DeskControl.app
+open build/Build/Products/Debug/LinakControl.app
 ```
 
 ---

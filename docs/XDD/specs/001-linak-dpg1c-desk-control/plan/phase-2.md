@@ -35,16 +35,16 @@ Establishes BLE connectivity, the DeskManager actor (central state coordinator),
 
   1. Prime: Read SDD BLE architecture and CoreBluetooth lifecycle `[ref: SDD/Implementation Examples/DPG1C Handshake Sequence]` `[ref: SDD/Building Block View/Components]`
   2. Test: BLEController initializes CBCentralManager on a dedicated serial queue (not MainActor); state transitions fire through AsyncStream (poweredOff → poweredOn → scanning → connected); `scanForPeripherals` filters by Control service UUID `99fa0001`; `connect()` stores peripheral reference; delegate callbacks bridge to async/await via continuations
-  3. Implement: Create `Sources/BLE/BLEController.swift` wrapping CBCentralManager and CBPeripheralDelegate. Expose async methods: `scan() -> AsyncStream<DiscoveredDesk>`, `connect(peripheralId:)`, `disconnect()`, `write(data:to:type:)`, `read(_:) async throws -> Data`, `notifications(for:) -> AsyncStream<Data>`. Use a dedicated `DispatchQueue(label: "com.deskcontrol.ble")`.
-  4. Validate: Unit tests with mock CBCentralManager (protocol-based); state transitions correct; delegate bridging works
-  5. Success: BLE scanning discovers desks filtered by LINAK service UUID `[ref: PRD/Feature 1/AC-1]`; connection completes `[ref: PRD/Feature 1/AC-2]`
+  3. Implement: Create `Sources/BLE/BLEControllerProtocol.swift` defining the protocol with all async methods. Create `Sources/BLE/BLEController.swift` conforming to the protocol, wrapping CBCentralManager and CBPeripheralDelegate. Create `Sources/BLE/MockBLEController.swift` with pre-scripted responses and write capture for tests. Expose async methods: `scan() -> AsyncStream<DiscoveredDesk>`, `connect(peripheralId:)`, `disconnect()`, `write(data:to:type:)`, `read(_:) async throws -> Data`, `notifications(for:) -> AsyncStream<Data>`. Use a dedicated `DispatchQueue(label: "com.linakcontrol.ble")`. Add `DESK_MOCK_BLE=1` env var check at startup to swap implementation for integration tests.
+  4. Validate: Unit tests with MockBLEController; state transitions correct; delegate bridging works; mock captures written bytes for assertion
+  5. Success: BLE scanning discovers desks filtered by LINAK service UUID `[ref: PRD/Feature 1/AC-1]`; connection completes `[ref: PRD/Feature 1/AC-2]`; MockBLEController enables all downstream testing without hardware
 
 - [ ] **T2.2 DPG1C Handshake** `[activity: build-feature]`
 
   1. Prime: Read SDD handshake sequence step-by-step `[ref: SDD/Implementation Examples/DPG1C Handshake Sequence]`
   2. Test: Handshake enables notifications on characteristics 0003, 0011, 0021; reads mask 0029 (expects 0x01); sends capability queries in correct order (7F 80, 7F 86, 7F 81, 7F 88, 7F 89-8C); parses capability response byte (preset count, autoUp/Down flags); extracts 4 preset heights from 7F 89-8C responses; fails gracefully if mask value is unexpected
-  3. Implement: Add `performHandshake()` method to BLEController. Parse capabilities byte. Return `HandshakeResult` with capabilities and preset heights. Use the exact byte sequences from SDD.
-  4. Validate: Test with recorded BLE data; all 8 capability queries sent in order; preset heights parsed correctly
+  3. Implement: Add `performHandshake()` method to BLEController. Parse capabilities byte. Return `HandshakeResult` with capabilities and preset heights. Use the exact byte sequences from SDD. Create `Tests/Fixtures/HandshakeFixtures.swift` with static `Data` arrays representing each handshake notification response (captured from real hardware, document source in fixture comments).
+  4. Validate: Test with fixture data via MockBLEController; all 8 capability queries sent in order; preset heights parsed correctly
   5. Success: Handshake completes within 5 seconds; all 4 presets read from firmware `[ref: PRD/Feature 1/AC-2]` `[ref: PRD/Feature 5/AC-1]`
 
 - [ ] **T2.3 DeskManager Actor** `[activity: domain-modeling]`
@@ -83,9 +83,9 @@ Establishes BLE connectivity, the DeskManager actor (central state coordinator),
 
   1. Prime: Read SDD reconnection and wake-up sequences `[ref: SDD/Runtime View/Wake from Sleep Reconnection]` `[ref: SDD/Runtime View/Error Handling]` `[ref: SDD/Runtime View/Complex Logic: Heartbeat]`
   2. Test: On `didDisconnect`, DeskManager calls `connect()` with exponential backoff (1s, 2s, 4s, 8s, max 60s); on `NSWorkspace.didWakeNotification`, waits for `.poweredOn` then reconnects; wake-up sends `FE 00`, waits 200ms, sends `FF 00`, waits 200ms, then handshakes; retries up to 3 times; heartbeat writes `01 80` to 0031 every 1 second while connected; heartbeat failure (3x) triggers reconnect
-  3. Implement: Add reconnection logic to DeskManager (exponential backoff timer). Add wake observer (`NSWorkspace.shared.notificationCenter`). Add `wakeUpDesk()` method. Add heartbeat timer using `Task.sleep`.
-  4. Validate: Test reconnection timing; wake-up byte sequences; heartbeat interval
-  5. Success: Reconnects within 8 seconds after sleep `[ref: PRD/Feature 2/AC-1,2,3]`; wake-up recovers sleeping desk `[ref: PRD/Feature 11/AC-1,2]`; heartbeat prevents desk sleep `[ref: SDD/Runtime View/Complex Logic: Heartbeat]`
+  3. Implement: Inject a `Clock` protocol into DeskManager (use Swift 5.7+ `Clock` API or custom protocol with `TestClock` for deterministic time advancement in tests). Add reconnection logic with exponential backoff. Add wake observer (`NSWorkspace.shared.notificationCenter`). Add `wakeUpDesk()` method. Add conditional heartbeat that pauses after 10 min idle (per SDD). Add transparent wake-up: when a command is issued and desk is sleeping, auto-run wake-up sequence before executing the command (within 1.5s total).
+  4. Validate: Test with TestClock — advance time explicitly to verify backoff intervals (1s, 2s, 4s, 8s) without real sleeping; verify heartbeat pauses after 10 min idle; verify transparent wake+command within 1.5s using TestClock; verify wake-up byte sequences via MockBLEController
+  5. Success: Reconnects within 8 seconds after sleep `[ref: PRD/Feature 2/AC-1,2,3]`; wake-up recovers sleeping desk within 1.5s `[ref: PRD/Feature 11/AC-1,2]`; heartbeat pauses after 10 min idle `[ref: SDD/Runtime View/Complex Logic: Conditional Heartbeat]`
 
 - [ ] **T2.8 Phase Validation** `[activity: validate]`
 

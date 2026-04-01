@@ -39,7 +39,7 @@ CON-2 **No Developer Account:** No paid Apple Developer Program. Ad-hoc code sig
 
 CON-3 **BLE Single Connection:** DPG1C supports exactly one BLE connection at a time. App replaces the phone app entirely.
 
-CON-4 **Local Only:** No cloud, no network, no telemetry. All data stored in `~/Library/Application Support/DeskControl/`. IPC via Unix domain socket only.
+CON-4 **Local Only:** No cloud, no network, no telemetry. All data stored in `~/Library/Application Support/LinakControl/`. IPC via Unix domain socket only.
 
 CON-5 **Resource Budget:** Idle CPU < 0.1%, memory < 20 MB. Background process must be invisible to the user.
 
@@ -114,7 +114,7 @@ graph TB
     User -->|clicks| MenuBar[Menu Bar App]
     User -->|types| CLI[deskctl CLI]
 
-    MenuBar -->|IPC| App[DeskControl Process]
+    MenuBar -->|IPC| App[LinakControl Process]
     CLI -->|IPC| App
 
     App -->|BLE| Desk[LINAK DPG1C Desk Panel]
@@ -172,18 +172,18 @@ data:
 
 ```bash
 # Core Commands
-Build:    xcodebuild -scheme DeskControl -configuration Release
+Build:    xcodebuild -scheme LinakControl -configuration Release
 Dev:      open LinakControl.xcodeproj  # run from Xcode
-Test:     xcodebuild test -scheme DeskControl -destination 'platform=macOS'
+Test:     xcodebuild test -scheme LinakControl -destination 'platform=macOS'
 Lint:     swiftlint
 
 # Installation
-Install:  cp -r build/Release/DeskControl.app /Applications/
+Install:  cp -r build/Release/LinakControl.app /Applications/
           cp build/Release/deskctl /usr/local/bin/
-Unsign:   xattr -dr com.apple.quarantine /Applications/DeskControl.app
+Unsign:   xattr -dr com.apple.quarantine /Applications/LinakControl.app
 
 # Daemon
-Start:    open /Applications/DeskControl.app
+Start:    open /Applications/LinakControl.app
 Stop:     deskctl service stop
 Status:   deskctl service status
 ```
@@ -201,7 +201,7 @@ Status:   deskctl service status
 
 ```mermaid
 graph LR
-    subgraph DeskControl.app
+    subgraph LinakControl.app
         MenuBar[MenuBarController]
         Popover[PopoverView]
         Settings[SettingsView]
@@ -238,13 +238,13 @@ graph LR
 
 ### Directory Map
 
-**Target**: DeskControl (macOS App)
+**Target**: LinakControl (macOS App)
 ```
 LinakControl/
 ├── LinakControl.xcodeproj
 ├── Sources/
 │   ├── App/
-│   │   ├── DeskControlApp.swift           # NEW: @main, LSUIElement, app lifecycle
+│   │   ├── LinakControlApp.swift           # NEW: @main, LSUIElement, app lifecycle
 │   │   └── Info.plist                     # NEW: NSBluetoothAlwaysUsageDescription
 │   ├── UI/
 │   │   ├── MenuBarController.swift        # NEW: NSStatusItem, two-zone setup
@@ -256,43 +256,44 @@ LinakControl/
 │   │   ├── FirstRunView.swift             # NEW: Welcome → scan → connect → done
 │   │   └── DeskViewModel.swift            # NEW: @Observable, binds UI to DeskManager
 │   ├── BLE/
-│   │   ├── BLEController.swift            # NEW: CBCentralManager + CBPeripheral wrapper
+│   │   ├── BLEControllerProtocol.swift    # NEW: Protocol for DeskManager dependency injection + testing
+│   │   ├── BLEController.swift            # NEW: CBCentralManager + CBPeripheral wrapper (conforms to BLEControllerProtocol)
+│   │   ├── MockBLEController.swift        # NEW: Mock for tests — pre-scripted responses, write capture
 │   │   ├── DeskProtocol.swift             # NEW: DPG1C command encoding/decoding
 │   │   └── DeskCharacteristics.swift      # NEW: UUID constants, characteristic map
 │   ├── Core/
 │   │   ├── DeskManager.swift              # NEW: Actor — central state, coordinates BLE + IPC
-│   │   ├── DeskState.swift                # NEW: Height, connection, presets, movement state
-│   │   └── PresetController.swift         # NEW: Preset read/write/recall logic
+│   │   └── DeskState.swift                # NEW: Height, connection, presets, movement state
 │   ├── IPC/
 │   │   ├── IPCServer.swift                # NEW: Unix socket listener, request routing
-│   │   ├── IPCProtocol.swift              # NEW: Message types, framing, codable structs
-│   │   └── IPCClient.swift               # NEW: Shared client (used by deskctl)
+│   │   └── IPCProtocol.swift              # NEW: Typed message enums, framing helpers
 │   ├── Config/
-│   │   ├── ConfigStore.swift              # NEW: Read/write config.json + profiles.json
-│   │   └── ConfigModels.swift             # NEW: Codable settings, profile structs
+│   │   ├── ConfigStore.swift              # NEW: Read/write config.json
+│   │   └── ConfigModels.swift             # NEW: Codable settings struct (single file, no profiles)
 │   └── Util/
-│       ├── Logger.swift                   # NEW: os.Logger wrapper, configurable levels
+│       ├── Logger.swift                   # NEW: os.Logger wrapper (#if DEBUG for verbose BLE frames)
 │       └── HeightConverter.swift          # NEW: mm → cm/inch conversion
 ├── Sources/deskctl/
 │   ├── DeskctlCommand.swift               # NEW: Root command (ArgumentParser)
-│   ├── StatusCommand.swift                # NEW: deskctl status
+│   ├── IPCClient.swift                    # NEW: Unix socket client (deskctl-only, not shared with app)
+│   ├── StatusCommand.swift                # NEW: deskctl status [--json]
 │   ├── HeightCommand.swift                # NEW: deskctl height [--json]
 │   ├── MoveCommand.swift                  # NEW: deskctl up/down [--auto|--manual]
 │   ├── PresetCommand.swift                # NEW: deskctl preset <1-4> [--save]
 │   ├── ServiceCommand.swift               # NEW: deskctl service status/stop/install
-│   └── Formatters.swift                   # NEW: Table + JSON output formatting
+│   └── Formatters.swift                   # NEW: Table + JSON output + JSON error formatting to stderr
 ├── Tests/
 │   ├── BLETests/
 │   │   ├── DeskProtocolTests.swift        # NEW: Command encoding/decoding
-│   │   └── HeightParsingTests.swift       # NEW: Raw bytes → height_mm conversion
+│   │   ├── HeightParsingTests.swift       # NEW: Raw bytes → height_mm conversion
+│   │   └── BLEControllerTests.swift       # NEW: State machine, handshake, mock-based
 │   ├── CoreTests/
-│   │   ├── DeskStateTests.swift           # NEW: State transitions, preset matching
-│   │   └── PresetControllerTests.swift    # NEW: Tolerance, edge cases
+│   │   └── DeskStateTests.swift           # NEW: State transitions, preset matching, tolerance
 │   ├── IPCTests/
-│   │   ├── IPCProtocolTests.swift         # NEW: Message framing, serialization
+│   │   ├── IPCProtocolTests.swift         # NEW: Message framing, typed enum serialization
 │   │   └── IPCServerTests.swift           # NEW: Request routing, error responses
 │   └── ConfigTests/
-│       └── ConfigStoreTests.swift         # NEW: Load, save, defaults, migration
+│       └── ConfigStoreTests.swift         # NEW: Load, save, defaults
 └── Resources/
     └── Assets.xcassets/                   # NEW: Menu bar icons (desk glyph)
 ```
@@ -301,9 +302,11 @@ LinakControl/
 
 #### IPC Protocol (Unix Domain Socket)
 
-**Socket path:** `~/Library/Application Support/DeskControl/deskcontrol.sock`
+**Socket path:** `~/Library/Application Support/LinakControl/linakcontrol.sock`
 
-**Framing:** Each message is length-prefixed:
+**Socket lifecycle:** On startup: (1) try `connect()` to existing socket — if succeeds, another instance is running, exit with error; (2) if `connect()` fails with ECONNREFUSED, `unlink()` the stale socket; (3) `bind()` and `listen()`. On shutdown/SIGTERM/SIGINT: `unlink()` the socket file. Directory created with mode `0700`, socket created with mode `0600`.
+
+**Framing:** Each message is length-prefixed (max payload: 64 KB):
 ```
 [4 bytes: uint32 big-endian payload length][UTF-8 JSON payload]
 ```
@@ -312,7 +315,7 @@ LinakControl/
 ```json
 {
   "id": "uuid-string",
-  "method": "getStatus | move | stop | goPreset | savePreset | subscribe | getSettings | setSettings",
+  "method": "getStatus | move | stop | goPreset | savePreset",
   "params": {}
 }
 ```
@@ -333,26 +336,17 @@ LinakControl/
 }
 ```
 
-**Event format (pushed after `subscribe`):**
-```json
-{
-  "event": "heightUpdate | connectionChanged | presetActivated",
-  "data": {}
-}
-```
-
 #### IPC Methods
 
 | Method | Params | Result | Description |
 |--------|--------|--------|-------------|
-| `getStatus` | — | `{ connected, deskName, height_mm, height_display, unit, profile, presets, activePreset }` | Full status snapshot |
+| `getStatus` | — | `{ connected, deskName, height_mm, height_display, unit, presets, activePreset }` | Full status snapshot |
 | `move` | `{ direction: "up"\|"down", mode?: "auto"\|"manual" }` | `{ ok: true }` | Start movement |
 | `stop` | — | `{ ok: true }` | Stop movement |
-| `goPreset` | `{ index: 1-4 }` | `{ ok: true, target_mm: int }` | Move to preset |
+| `goPreset` | `{ index: 1-4 }` | `{ ok: true, target_mm: int }` | Move to preset (fire-and-forget — returns immediately, desk begins moving) |
 | `savePreset` | `{ index: 1-4 }` | `{ ok: true, height_mm: int }` | Save current height to preset |
-| `subscribe` | — | `{ ok: true }` | Start receiving events |
-| `getSettings` | — | `{ unit, autoRun, startAtLogin, hotkeys }` | Read settings |
-| `setSettings` | `{ unit?, autoRun?, startAtLogin? }` | `{ ok: true }` | Update settings |
+
+Settings are changed via the menu bar UI only. No CLI settings commands.
 
 #### IPC Error Codes
 
@@ -361,14 +355,25 @@ LinakControl/
 | 1 | General error | 1 |
 | 2 | Daemon not running (socket not found) | 2 |
 | 3 | Desk not connected | 3 |
-| 4 | Permission denied | 4 |
 | 5 | Timeout (command took too long) | 5 |
 | 10 | Invalid request (bad method or params) | 1 |
+
+#### CLI Error Output
+
+When `--json` is passed to any CLI command, errors are written to stderr as JSON:
+```json
+{ "error": 3, "message": "desk not connected" }
+```
+
+Without `--json`, errors are plain text to stderr:
+```
+error: desk not connected
+```
 
 #### Data Storage Changes
 
 ```yaml
-# All files in ~/Library/Application Support/DeskControl/
+# All files in ~/Library/Application Support/LinakControl/
 
 File: config.json
   paired_desk_uuid: string          # CoreBluetooth peripheral identifier
@@ -378,23 +383,10 @@ File: config.json
   auto_run_down: "manual" | "auto" # Down button mode, default "manual"
   start_at_login: boolean          # Register as login item, default false
   hotkeys_enabled: boolean         # Global hotkeys, default false
-  log_level: "error" | "info" | "debug"  # Default "info"
-
-File: profiles.json
-  active_profile: string           # Profile name
-  profiles: [
-    {
-      name: string                 # e.g. "Marcus"
-      role: "owner" | "guest"
-      preset_labels: {             # Local metadata overlay on hardware presets
-        "1": string?,              # e.g. "Sitting"
-        "2": string?,              # e.g. "Standing"
-        "3": string?,
-        "4": string?
-      }
-      shared_presets: [int]        # Preset indices visible to guests
-    }
-  ]
+  preset_1_label: string?          # e.g. "Sitting", optional local metadata
+  preset_2_label: string?          # e.g. "Standing"
+  preset_3_label: string?
+  preset_4_label: string?
 ```
 
 #### Application Data Models
@@ -424,25 +416,44 @@ enum ConnectionState {
 struct PresetPosition {
     let index: Int                        // 1-4
     var heightMM: Int?                    // nil = unset
-    var label: String?                    // Local metadata from profiles.json
+    var label: String?                    // Local metadata from config.json (preset_N_label)
 }
 
-// IPC message types
+// IPC message types — typed per method, no AnyCodable
+enum IPCMethod: String, Codable {
+    case getStatus, move, stop, goPreset, savePreset
+}
+
 struct IPCRequest: Codable {
     let id: String
-    let method: String
-    let params: [String: AnyCodable]?
+    let method: IPCMethod
+    let params: IPCParams?
+}
+
+enum IPCParams: Codable {
+    case move(direction: String, mode: String?)     // "up"/"down", "auto"/"manual"
+    case preset(index: Int)                         // 1-4
 }
 
 struct IPCResponse: Codable {
     let id: String
-    let result: [String: AnyCodable]?
+    let result: IPCResult?
     let error: IPCError?
 }
 
-struct IPCEvent: Codable {
-    let event: String
-    let data: [String: AnyCodable]
+enum IPCResult: Codable {
+    case status(StatusResult)
+    case ok(target_mm: Int?)
+}
+
+struct StatusResult: Codable {
+    let connected: Bool
+    let deskName: String?
+    let height_mm: Int?
+    let height_display: String?
+    let unit: String
+    let presets: [PresetInfo]
+    let activePreset: Int?
 }
 
 struct IPCError: Codable {
@@ -456,9 +467,9 @@ struct IPCError: Codable {
 ```yaml
 # Inter-Component Communication
 - from: deskctl (CLI)
-  to: DeskControl.app (IPCServer)
+  to: LinakControl.app (IPCServer)
   protocol: Unix Domain Socket (AF_UNIX)
-  endpoints: [getStatus, move, stop, goPreset, savePreset, subscribe, getSettings, setSettings]
+  endpoints: [getStatus, move, stop, goPreset, savePreset]
   data_flow: "CLI sends JSON requests, receives JSON responses"
 
 - from: DeskViewModel (UI)
@@ -604,6 +615,11 @@ func activePreset(height heightMM: Int, presets: [PresetPosition], isMoving: Boo
 ```swift
 /// Move desk to a target height by repeatedly writing to Reference Input (99fa0031)
 func moveToHeight(targetMM: Int, peripheral: CBPeripheral) async throws {
+    // Safety guard: reject targets outside known desk range
+    guard (600...1350).contains(targetMM) else {
+        throw DeskError.targetOutOfRange(targetMM)
+    }
+
     let control  = characteristic(uuid: "99fa0002")
     let refInput = characteristic(uuid: "99fa0031")
 
@@ -683,7 +699,7 @@ sequenceDiagram
 ### Primary Flow: CLI Preset Command
 
 1. User runs `deskctl preset 2`
-2. CLI connects to `~/Library/Application Support/DeskControl/deskcontrol.sock`
+2. CLI connects to `~/Library/Application Support/LinakControl/linakcontrol.sock`
 3. CLI sends `{ "id": "...", "method": "goPreset", "params": { "index": 2 } }`
 4. IPCServer routes to DeskManager
 5. DeskManager executes same flow as menu bar (see above)
@@ -749,7 +765,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant OS as macOS
-    participant App as DeskControl
+    participant App as LinakControl
     participant DM as DeskManager
     participant BLE as BLEController
     participant Desk as DPG1C
@@ -787,7 +803,7 @@ sequenceDiagram
 
 **CLI daemon not running:**
 - CLI attempts socket connect → `ECONNREFUSED` or `ENOENT`
-- Prints `error: daemon not running — start DeskControl.app first` to stderr
+- Prints `error: daemon not running — start LinakControl.app first` to stderr
 - Exits with code 2
 
 **Invalid preset (unset):**
@@ -801,23 +817,34 @@ sequenceDiagram
 - UI shows "Desk not responding" with manual retry button
 - User can try unplugging and re-plugging the desk panel
 
-### Complex Logic: Heartbeat and Sleep Prevention
+### Complex Logic: Conditional Heartbeat
+
+The heartbeat keeps the desk awake but pauses after 10 minutes of no user interaction to allow the desk to enter its natural sleep mode. This aligns with Feature 11 (sleep/wake recovery).
 
 ```
-ALGORITHM: Heartbeat Keep-Alive
-INPUT: connected peripheral
-OUTPUT: desk stays awake
+ALGORITHM: Conditional Heartbeat
+INPUT: connected peripheral, lastUserAction timestamp
+OUTPUT: desk stays awake during active use; sleeps after idle
 
 1. START heartbeat timer (every 1 second)
 2. WHILE connected:
-   a. Write 0x01 0x80 to 99fa0031 (Reference Input)
-   b. IF write fails:
-      - Increment failure count
-      - IF failure count >= 3: trigger reconnection
-   c. RESET failure count on success
-   d. WAIT 1 second
-3. ON disconnect: cancel heartbeat timer
-4. ON reconnect: restart heartbeat after handshake completes
+   a. IF (now - lastUserAction) > 10 minutes:
+      - PAUSE heartbeat (desk will enter sleep mode naturally)
+      - CONTINUE loop (stay connected, just stop writing heartbeat)
+   b. ELSE:
+      - Write 0x01 0x80 to 99fa0031 (Reference Input)
+      - IF write fails:
+        - Increment failure count
+        - IF failure count >= 3: trigger reconnection
+      - RESET failure count on success
+   c. WAIT 1 second
+3. ON user action (move, preset, CLI command):
+   - UPDATE lastUserAction = now
+   - IF heartbeat paused AND desk sleeping:
+     - Run wake-up sequence (FE 00 → FF 00) before executing command
+   - RESUME heartbeat
+4. ON disconnect: cancel heartbeat timer
+5. ON reconnect: restart heartbeat after handshake completes
 ```
 
 ## Deployment View
@@ -825,7 +852,7 @@ OUTPUT: desk stays awake
 ### Single Application Deployment
 
 - **Environment:** macOS 13+ (Ventura), Apple Silicon. Runs as a menu bar app (LSUIElement = YES).
-- **Configuration:** No environment variables. All config in `~/Library/Application Support/DeskControl/config.json`. First-run creates defaults.
+- **Configuration:** No environment variables. All config in `~/Library/Application Support/LinakControl/config.json`. First-run creates defaults.
 - **Dependencies:** No external services. Only system frameworks (CoreBluetooth, SwiftUI, UserNotifications).
 - **Performance:** Idle: < 0.1% CPU, < 20 MB RAM. Active (desk moving): < 0.5% CPU.
 
@@ -833,14 +860,14 @@ OUTPUT: desk stays awake
 
 ```bash
 # Build
-xcodebuild -scheme DeskControl -configuration Release \
+xcodebuild -scheme LinakControl -configuration Release \
   -derivedDataPath build/ \
   CODE_SIGN_IDENTITY="-" \
   CODE_SIGNING_REQUIRED=YES
 
 # Install app
-cp -r build/Build/Products/Release/DeskControl.app /Applications/
-xattr -dr com.apple.quarantine /Applications/DeskControl.app
+cp -r build/Build/Products/Release/LinakControl.app /Applications/
+xattr -dr com.apple.quarantine /Applications/LinakControl.app
 
 # Install CLI
 cp build/Build/Products/Release/deskctl /usr/local/bin/
@@ -935,14 +962,14 @@ stateDiagram-v2
 
 **Logging:**
 - Use `os.Logger` (Apple's unified logging system)
-- Subsystem: `com.deskcontrol`
+- Subsystem: `com.linakcontrol`
 - Categories: `ble`, `ipc`, `core`, `ui`
 - Levels: `.error` (always), `.info` (default), `.debug` (verbose BLE frames)
-- Configurable via `config.json` `log_level` field
-- Viewable via Console.app or `log stream --predicate 'subsystem == "com.deskcontrol"'`
+- Verbose BLE frame logging controlled via `#if DEBUG` compile flag
+- Viewable via Console.app or `log stream --predicate 'subsystem == "com.linakcontrol"'`
 
 **Performance:**
-- BLE notifications throttled to 10 Hz max for UI updates
+- BLE notifications: minimum 3 Hz during movement, throttled to 10 Hz max for UI updates
 - Heartbeat timer uses `DispatchSourceTimer` (low power)
 - SwiftUI views use fine-grained `@Observable` properties to minimize re-renders
 - No polling — all updates are event-driven (BLE notifications, socket reads)
@@ -955,7 +982,7 @@ stateDiagram-v2
   - Alternatives rejected: Separate daemon + thin UI app (over-engineered for single user).
   - User confirmed: Yes (2026-04-01)
 
-- [x] **ADR-2 Unix Domain Socket for IPC:** CLI communicates with the app via `~/Library/Application Support/DeskControl/deskcontrol.sock` using length-prefixed JSON.
+- [x] **ADR-2 Unix Domain Socket for IPC:** CLI communicates with the app via `~/Library/Application Support/LinakControl/linakcontrol.sock` using length-prefixed JSON.
   - Rationale: Simpler and more secure than localhost HTTP. No port conflicts, no firewall issues. Socket file permissions (0600) enforce access control. JSON is human-readable and debuggable.
   - Trade-offs: No built-in tooling like curl for debugging (must use custom client). Acceptable — the CLI itself is the debugging tool.
   - Alternatives rejected: localhost HTTP (port conflicts, firewall, unnecessary complexity), XPC (requires code signing, overkill for JSON messages), named pipes (half-duplex, harder to manage).
@@ -968,14 +995,14 @@ stateDiagram-v2
   - User confirmed: Yes (2026-04-01)
 
 - [x] **ADR-4 Hardware Presets as Source of Truth:** Preset heights are read from desk firmware on every connection. The app never caches heights locally.
-  - Rationale: The desk firmware is the authoritative source. If presets are changed via the physical panel or another app, our display stays correct. Local metadata (labels like "Sitting"/"Standing") is stored separately in `profiles.json`.
+  - Rationale: The desk firmware is the authoritative source. If presets are changed via the physical panel or another app, our display stays correct. Local metadata (labels like "Sitting"/"Standing") is stored in `config.json` as `preset_N_label` fields.
   - Trade-offs: Preset heights are unavailable when disconnected (UI shows "—"). Acceptable — controls are disabled anyway when disconnected.
   - Alternatives rejected: Local cache with sync (stale data risk, complexity for zero benefit).
   - User confirmed: Yes (2026-04-01)
 
 - [x] **ADR-5 SMAppService for Login Item:** Use macOS 13+ `SMAppService.mainApp.register()` instead of a LaunchAgent plist.
   - Rationale: Apple's modern recommended API. No plist file management. Works with ad-hoc signing. User controls it via System Settings > Login Items.
-  - Trade-offs: Requires macOS 13+ (already our minimum target). No auto-restart on crash (unlike LaunchAgent KeepAlive). For crash recovery, the app re-launches on next login — acceptable for personal use.
+  - Trade-offs: Requires macOS 13+ (already our minimum target). No auto-restart on crash (unlike LaunchAgent KeepAlive). App re-launches on next login — acceptable for personal use. If crash recovery becomes a real issue, a LaunchAgent watchdog plist can be added later without changing the architecture.
   - Alternatives rejected: LaunchAgent plist (requires manual install/uninstall, more moving parts, plist path management).
   - User confirmed: Yes (2026-04-01)
 
@@ -1085,7 +1112,7 @@ stateDiagram-v2
 |------|------------|---------|
 | Characteristic | A BLE GATT characteristic — a typed data value on a BLE device | Each desk function (height, commands, presets) maps to a characteristic UUID |
 | Reference Input / Output | LINAK's names for BLE services handling target position writes (Input) and height reads (Output) | `99fa0030` = Reference Input (write target), `99fa0020` = Reference Output (read height) |
-| Heartbeat | Periodic write (`01 80`) to Reference Input to prevent desk sleep | Must be maintained while connected, every ~1 second |
+| Heartbeat | Periodic write (`01 80`) to Reference Input to prevent desk sleep | Active during user interaction; pauses after 10 min idle to allow desk sleep |
 | Zone 1 / Zone 2 | Two clickable areas in the menu bar | Zone 1 (desk icon) = popover, Zone 2 (preset) = quick-switch dropdown |
 
 ### BLE UUIDs

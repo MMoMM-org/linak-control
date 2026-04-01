@@ -17,7 +17,7 @@ phase: 1
 - `[ref: SDD/Glossary/BLE UUIDs]` — All service and characteristic UUIDs
 - `[ref: SDD/Glossary/BLE Commands]` — Command byte sequences
 - `[ref: SDD/Implementation Examples/Height Notification Parsing]` — Byte layout and conversion
-- `[ref: SDD/Data Storage Changes]` — config.json and profiles.json schemas
+- `[ref: SDD/Data Storage Changes]` — config.json schema (single file, no profiles.json)
 
 **Key Decisions**:
 - ADR-7: No SPM package — shared code via framework target or file inclusion
@@ -35,9 +35,9 @@ Establishes the Xcode project skeleton, BLE protocol encoding/decoding, and conf
 - [ ] **T1.1 Xcode Project Skeleton** `[activity: build-feature]`
 
   1. Prime: Read SDD Directory Map for full project structure `[ref: SDD/Directory Map]`
-  2. Test: Project builds for macOS (Apple Silicon); both targets (DeskControl app, deskctl CLI) compile; Info.plist contains `NSBluetoothAlwaysUsageDescription` and `LSUIElement = YES`
-  3. Implement: Create `LinakControl.xcodeproj` with two targets: `DeskControl` (macOS App) and `deskctl` (Command Line Tool). Add Info.plist with Bluetooth usage description. Configure ad-hoc code signing (`CODE_SIGN_IDENTITY="-"`). Add SwiftLint config. Add Swift ArgumentParser dependency for CLI target.
-  4. Validate: `xcodebuild -scheme DeskControl -configuration Debug` succeeds; `xcodebuild -scheme deskctl` succeeds; SwiftLint passes
+  2. Test: Project builds for macOS (Apple Silicon); both targets (LinakControl app, deskctl CLI) compile; Info.plist contains `NSBluetoothAlwaysUsageDescription` and `LSUIElement = YES`
+  3. Implement: Create `LinakControl.xcodeproj` with two targets: `LinakControl` (macOS App) and `deskctl` (Command Line Tool). Add Info.plist with Bluetooth usage description. Configure ad-hoc code signing (`CODE_SIGN_IDENTITY="-"`). Add SwiftLint config. Add Swift ArgumentParser dependency for CLI target.
+  4. Validate: `xcodebuild -scheme LinakControl -configuration Debug` succeeds; `xcodebuild -scheme deskctl` succeeds; SwiftLint passes
   5. Success: Both targets build clean on macOS `[ref: SDD/Deployment View]`
 
 - [ ] **T1.2 BLE Characteristic Constants** `[activity: domain-modeling]` `[parallel: true]`
@@ -67,16 +67,16 @@ Establishes the Xcode project skeleton, BLE protocol encoding/decoding, and conf
 - [ ] **T1.5 ConfigStore — Settings Persistence** `[activity: domain-modeling]`
 
   1. Prime: Read SDD data storage schemas `[ref: SDD/Data Storage Changes]`
-  2. Test: `ConfigStore` creates default config.json on first access; reads existing config; writes updated settings; validates preset index range (1-4); `ProfileStore` loads profiles.json with owner and default guest; round-trips all fields through encode/decode
-  3. Implement: Create `Sources/Config/ConfigModels.swift` with Codable structs matching SDD schema (AppConfig, Profile). Create `Sources/Config/ConfigStore.swift` that reads/writes JSON files in `~/Library/Application Support/DeskControl/`. Create directory if missing.
-  4. Validate: Unit tests with temp directory; encode→decode round-trip; default values correct
+  2. Test: `ConfigStore` creates default config.json on first access; reads existing config; writes updated settings; validates preset index range (1-4); round-trips all fields (including preset labels) through encode/decode; directory created with mode 0700, file with mode 0600
+  3. Implement: Create `Sources/Config/ConfigModels.swift` with single Codable struct matching SDD schema (no profiles.json — preset labels inline). Create `Sources/Config/ConfigStore.swift` that reads/writes config.json in `~/Library/Application Support/LinakControl/`. Create directory if missing with correct permissions.
+  4. Validate: Unit tests with temp directory; encode→decode round-trip; default values correct; file permissions verified
   5. Success: Config persists across restarts; defaults match SDD (unit=cm, autoRunUp=manual, autoRunDown=manual) `[ref: SDD/Data Storage Changes]` `[ref: PRD/Feature 9/AC-4]`
 
 - [ ] **T1.6 HeightConverter & Logger** `[activity: build-feature]` `[parallel: true]`
 
   1. Prime: Read PRD height display requirements `[ref: PRD/Feature 3]` `[ref: SDD/Cross-Cutting Concepts/System-Wide Patterns]`
   2. Test: `HeightConverter.display(mm: 1105, unit: .cm)` → "110.5 cm"; `.display(mm: 1105, unit: .inch)` → "43.5 in"; Logger writes to os.Logger with correct subsystem and categories
-  3. Implement: Create `Sources/Util/HeightConverter.swift` and `Sources/Util/Logger.swift` (os.Logger wrapper with subsystem `com.deskcontrol`, categories: ble, ipc, core, ui)
+  3. Implement: Create `Sources/Util/HeightConverter.swift` and `Sources/Util/Logger.swift` (os.Logger wrapper with subsystem `com.linakcontrol`, categories: ble, ipc, core, ui)
   4. Validate: Unit tests for conversion edge cases (minimum height, maximum height, rounding)
   5. Success: Height display matches PRD examples `[ref: PRD/Feature 3/AC-4]`
 

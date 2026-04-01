@@ -85,7 +85,7 @@ Builds the complete menu bar user interface. After this phase, the user can cont
 
   1. Prime: Read SDD app lifecycle `[ref: SDD/Solution Strategy]` `[ref: SDD/Deployment View]`
   2. Test: App starts with `LSUIElement = YES` (no Dock icon). Creates DeskManager, IPCServer, MenuBarController on launch. If paired desk exists in config, auto-connects on launch. If no paired desk, shows first-run view (Phase 6 — for now just show popover).
-  3. Implement: Create `Sources/App/DeskControlApp.swift` with `@main`. Initialize DeskManager, start IPCServer, create MenuBarController. Read config for paired desk. Trigger auto-connect if paired.
+  3. Implement: Create `Sources/App/LinakControlApp.swift` with `@main`. Initialize DeskManager, start IPCServer, create MenuBarController. Read config for paired desk. Trigger auto-connect if paired.
   4. Validate: App launches without Dock icon; menu bar items appear; auto-connects if configured
   5. Success: App runs as invisible background process with menu bar presence `[ref: PRD/Feature 8/AC-1]` `[ref: PRD/Feature 1/AC-3]`
 
