@@ -28,6 +28,9 @@ public final class MockBLEController: BLEControllerProtocol, @unchecked Sendable
     /// All writes captured by ``write(data:to:type:)`` in call order.
     public private(set) var writtenData: [(data: Data, characteristic: CBUUID)] = []
 
+    /// All setNotifyValue calls captured in call order.
+    public private(set) var notifyValueCalls: [(enabled: Bool, characteristic: CBUUID)] = []
+
     // MARK: - Behaviour control
 
     /// When `true`, ``connect(peripheralId:)`` throws ``BLEError/connectionFailed``.
@@ -117,6 +120,6 @@ public final class MockBLEController: BLEControllerProtocol, @unchecked Sendable
     }
 
     public func setNotifyValue(_ enabled: Bool, for characteristic: CBUUID) async throws {
-        // No-op in mock: notification subscriptions are pre-wired via mockNotificationStreams.
+        notifyValueCalls.append((enabled: enabled, characteristic: characteristic))
     }
 }

@@ -6,7 +6,7 @@ import Foundation
 // MARK: - Data Models
 
 /// Capabilities reported by the desk via the 7F 80 query on characteristic 99fa0011.
-public struct DeskCapabilities {
+public struct DeskCapabilities: Sendable {
     public let presetCount: Int
     public let hasAutoUp: Bool
     public let hasAutoDown: Bool
