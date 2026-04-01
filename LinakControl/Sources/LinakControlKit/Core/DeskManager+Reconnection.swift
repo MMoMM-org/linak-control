@@ -33,7 +33,13 @@ extension DeskManager {
 
         heartbeatTask?.cancel()
         heartbeatTask = nil
-        updateState { $0.connectionState = .disconnected }
+        movementTask?.cancel()
+        movementTask = nil
+        updateState {
+            $0.connectionState = .disconnected
+            $0.isMoving = false
+            $0.moveDirection = nil
+        }
         startReconnectionLoop()
     }
 
