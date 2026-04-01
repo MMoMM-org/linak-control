@@ -129,25 +129,29 @@ public actor DeskManager {
 
     /// Stops all desk movement.
     ///
+    /// Cancels any active manual movement or preset move, writes stop, and clears movement state.
+    ///
     /// - Throws: `DeskError.notConnected` if not currently connected.
     public func stop() async throws {
         try requireConnected()
         await cancelMovementTask()
+        cancelPresetMoveTask()
         try await writeStopCommand()
         updateState {
             $0.isMoving = false
             $0.moveDirection = nil
+            $0.targetPreset = nil
         }
     }
 
-    // MARK: - Presets (stubs — implementation in T2.5/T2.6)
+    // MARK: - Presets (implementation in DeskManager+Presets.swift)
 
     /// Moves the desk to the position stored in a preset slot.
     ///
     /// - Parameter index: Preset slot number (1–4).
-    /// - Throws: `DeskError.notConnected` if not currently connected.
+    /// - Throws: `DeskError.notConnected`, `DeskError.presetNotSet`, or `DeskError.targetOutOfRange`.
     public func goToPreset(index: Int) async throws {
-        try requireConnected()
+        try await executeGoToPreset(index: index)
     }
 
     /// Saves the current desk height to a preset slot.
