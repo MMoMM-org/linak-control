@@ -7,13 +7,13 @@ import Darwin
 // MARK: - IPCClientError
 
 /// Errors specific to the CLI's IPC communication.
-enum IPCClientError: Error, Equatable {
+public enum IPCClientError: Error, Equatable {
     case daemonNotRunning
     case connectionFailed(String)
     case invalidResponse
     case serverError(code: Int, message: String)
 
-    static func == (lhs: IPCClientError, rhs: IPCClientError) -> Bool {
+    public static func == (lhs: IPCClientError, rhs: IPCClientError) -> Bool {
         switch (lhs, rhs) {
         case (.daemonNotRunning, .daemonNotRunning): return true
         case (.invalidResponse, .invalidResponse): return true
@@ -27,19 +27,19 @@ enum IPCClientError: Error, Equatable {
 // MARK: - IPCClient
 
 /// Synchronous Unix domain socket client for the deskctl CLI.
-final class IPCClient {
+public final class IPCClient {
     private let socketPath: String
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    init(socketPath: String = IPCConstants.socketPath) {
+    public init(socketPath: String = IPCConstants.socketPath) {
         self.socketPath = socketPath
     }
 
     // MARK: - Public Interface
 
     /// Send a request and wait for the response.
-    func send(_ request: IPCRequest) throws -> IPCResponse {
+    public func send(_ request: IPCRequest) throws -> IPCResponse {
         let fd = try openConnection()
         defer { close(fd) }
 
@@ -47,7 +47,7 @@ final class IPCClient {
         return try readResponse(from: fd)
     }
 
-    func getStatus() throws -> StatusResult {
+    public func getStatus() throws -> StatusResult {
         let request = IPCRequest(id: UUID().uuidString, method: .getStatus, params: nil)
         let response = try send(request)
         guard let result = response.result, case .status(let status) = result else {
@@ -56,25 +56,25 @@ final class IPCClient {
         return status
     }
 
-    func move(direction: String, mode: String?) throws {
+    public func move(direction: String, mode: String?) throws {
         let request = IPCRequest(id: UUID().uuidString, method: .move, params: .move(direction: direction, mode: mode))
         let response = try send(request)
         try assertOkResult(response)
     }
 
-    func stop() throws {
+    public func stop() throws {
         let request = IPCRequest(id: UUID().uuidString, method: .stop, params: nil)
         let response = try send(request)
         try assertOkResult(response)
     }
 
-    func goPreset(index: Int) throws -> Int? {
+    public func goPreset(index: Int) throws -> Int? {
         let request = IPCRequest(id: UUID().uuidString, method: .goPreset, params: .preset(index: index))
         let response = try send(request)
         return try extractTargetMM(response)
     }
 
-    func savePreset(index: Int) throws -> Int? {
+    public func savePreset(index: Int) throws -> Int? {
         let request = IPCRequest(id: UUID().uuidString, method: .savePreset, params: .preset(index: index))
         let response = try send(request)
         return try extractTargetMM(response)
