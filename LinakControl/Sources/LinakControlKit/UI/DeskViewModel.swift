@@ -2,6 +2,7 @@
 // LinakControlKit — ObservableObject bridging DeskManager to SwiftUI.
 
 import Foundation
+import ServiceManagement
 
 // MARK: - DeskViewModel
 
@@ -39,10 +40,22 @@ public final class DeskViewModel: ObservableObject {
     /// Name of the currently connected desk, populated from `DeskState` snapshots.
     @Published public var deskName: String?
 
+    // MARK: - Settings state
+
+    /// True when the settings panel is visible inside the popover.
+    @Published public var showSettings: Bool = false
+
+    /// Mirrors `AppConfig.startAtLogin`; toggling this registers/unregisters the login item.
+    @Published public var startAtLogin: Bool = false
+
+    /// Mirrors `AppConfig.hotkeysEnabled`.
+    @Published public var hotkeysEnabled: Bool = false
+
     // MARK: - Dependencies
 
     private let deskManager: DeskManager
     private let configStore: ConfigStore
+    private let loginItemManager: LoginItemManaging
     private var stateTask: Task<Void, Never>?
     private var scanTask: Task<Void, Never>?
 
@@ -56,10 +69,21 @@ public final class DeskViewModel: ObservableObject {
 
     // MARK: - Init
 
-    public init(deskManager: DeskManager, configStore: ConfigStore) {
+    public init(
+        deskManager: DeskManager,
+        configStore: ConfigStore,
+        loginItemManager: LoginItemManaging = LoginItemManager()
+    ) {
         self.deskManager = deskManager
         self.configStore = configStore
-        isFirstRun = (try? configStore.load())?.pairedDeskUUID == nil
+        self.loginItemManager = loginItemManager
+        let config = (try? configStore.load()) ?? .default
+        isFirstRun = config.pairedDeskUUID == nil
+        unit = config.unit
+        autoRunUp = config.autoRunUp
+        autoRunDown = config.autoRunDown
+        startAtLogin = config.startAtLogin
+        hotkeysEnabled = config.hotkeysEnabled
         startObservingStateStream()
     }
 
@@ -146,6 +170,24 @@ public final class DeskViewModel: ObservableObject {
                 return
             }
             try? await deskManager.connect(peripheralId: peripheralId)
+        }
+    }
+
+    /// Persists the start-at-login preference and registers or unregisters the login item.
+    ///
+    /// Errors from SMAppService (e.g. duplicate registration) are silently ignored;
+    /// the setting is still persisted so the UI stays in sync.
+    public func setStartAtLogin(_ enabled: Bool) {
+        startAtLogin = enabled
+        if enabled {
+            try? loginItemManager.register()
+        } else {
+            try? loginItemManager.unregister()
+        }
+        Task {
+            var config = (try? configStore.load()) ?? .default
+            config.startAtLogin = enabled
+            try? configStore.save(config)
         }
     }
 
