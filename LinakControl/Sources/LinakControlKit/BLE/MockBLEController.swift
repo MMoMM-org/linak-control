@@ -26,10 +26,13 @@ public final class MockBLEController: BLEControllerProtocol, @unchecked Sendable
     // MARK: - Captured outputs
 
     /// All writes captured by ``write(data:to:type:)`` in call order.
-    public private(set) var writtenData: [(data: Data, characteristic: CBUUID)] = []
+    public var writtenData: [(data: Data, characteristic: CBUUID)] = []
 
     /// All setNotifyValue calls captured in call order.
     public private(set) var notifyValueCalls: [(enabled: Bool, characteristic: CBUUID)] = []
+
+    /// Number of times ``connect(peripheralId:)`` has been called.
+    public private(set) var connectCallCount: Int = 0
 
     // MARK: - Behaviour control
 
@@ -79,6 +82,7 @@ public final class MockBLEController: BLEControllerProtocol, @unchecked Sendable
     // MARK: - BLEControllerProtocol — connect / disconnect
 
     public func connect(peripheralId: UUID) async throws {
+        connectCallCount += 1
         if connectDelay > .zero {
             try await Task.sleep(for: connectDelay)
         }
