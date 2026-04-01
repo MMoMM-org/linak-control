@@ -1,0 +1,2 @@
+// DeskProtocol.swift
+// LinakControl

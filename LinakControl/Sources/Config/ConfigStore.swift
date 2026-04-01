@@ -1,0 +1,2 @@
+// ConfigStore.swift
+// LinakControl

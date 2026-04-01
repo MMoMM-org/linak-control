@@ -1,0 +1,2 @@
+// ConfigModels.swift
+// LinakControl

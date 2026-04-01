@@ -1,0 +1,2 @@
+// IPCProtocol.swift
+// LinakControl

@@ -1,0 +1,2 @@
+// DeskCharacteristics.swift
+// LinakControl
