@@ -136,18 +136,19 @@ final class EncodeTargetHeightTests: XCTestCase {
 final class ParsePresetHeightTests: XCTestCase {
 
     func testValidPreset() {
-        // preset at 1000mm -> raw = 10000 = 0x2710 -> bytes[2:3] = [0x10, 0x27]
-        let data = makeData([0x7F, 0x89, 0x10, 0x27])
+        // preset at 1000mm -> raw = 10000 = 0x2710 -> bytes[3:4] = [0x10, 0x27]
+        // DPG format: [status, length, slot, height_lo, height_hi, ...]
+        let data = makeData([0x01, 0x07, 0x01, 0x10, 0x27, 0x00, 0x00, 0x00, 0x00])
         XCTAssertEqual(parsePresetHeight(data), 1000)
     }
 
-    func testUnsetPresetAllZeros() {
-        let data = makeData([0x7F, 0x89, 0x00, 0x00])
+    func testUnsetPresetFFFF() {
+        let data = makeData([0x01, 0x05, 0x01, 0xFF, 0xFF, 0xFF, 0xFF])
         XCTAssertNil(parsePresetHeight(data))
     }
 
     func testDataTooShortReturnsNil() {
-        XCTAssertNil(parsePresetHeight(makeData([0x7F, 0x89, 0x10])))
+        XCTAssertNil(parsePresetHeight(makeData([0x01, 0x07, 0x01, 0x10])))
     }
 
     func testEmptyDataReturnsNil() {

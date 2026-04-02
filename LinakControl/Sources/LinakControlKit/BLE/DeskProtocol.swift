@@ -76,13 +76,14 @@ public func parseCapabilities(_ data: Data) -> DeskCapabilities? {
 
 /// Parse a preset height response to a 7F 89-8C query on characteristic 99fa0011.
 ///
-/// Height is stored as uint16 in 0.1 mm units at bytes [2:3] (little-endian).
-/// Returns nil when data is too short, or when the preset is unset (all zeros).
+/// DPG response format: [status, length, slot, height_lo, height_hi, ...].
+/// Height is a uint16 in 0.1 mm units at bytes [3:4] (little-endian).
+/// Returns nil when data is too short, or when the preset is unset (0xFFFF).
 public func parsePresetHeight(_ data: Data) -> Int? {
-    guard data.count >= 4 else { return nil }
+    guard data.count >= 5 else { return nil }
 
-    let rawHeight = UInt16(data[2]) | (UInt16(data[3]) << 8)
-    guard rawHeight != 0 else { return nil }
+    let rawHeight = UInt16(data[3]) | (UInt16(data[4]) << 8)
+    guard rawHeight != 0, rawHeight != 0xFFFF else { return nil }
 
     return Int(rawHeight) / 10
 }

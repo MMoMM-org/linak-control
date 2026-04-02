@@ -340,8 +340,9 @@ final class DeskManagerPresetSaveRereadTests: XCTestCase {
         let storedHeightMM = 1105
         let firmwareHeightMM = 1104
         let firmwareRaw = UInt16(firmwareHeightMM * 10)
-        let confirmedResponse = Data([0x7F, 0x8A, UInt8(firmwareRaw & 0xFF), UInt8(firmwareRaw >> 8)])
-        let saveConfirmation = Data([0x7F, 0x8A, 0x00, 0x00])
+        // DPG format: [status, length, slot, height_lo, height_hi, ...]
+        let confirmedResponse = Data([0x01, 0x07, 0x02, UInt8(firmwareRaw & 0xFF), UInt8(firmwareRaw >> 8), 0x00, 0x00, 0x00, 0x00])
+        let saveConfirmation = Data([0x01, 0x00])
         let (manager, _) = try await makeConnectedManagerForSave(
             heightMM: storedHeightMM,
             saveResponses: [saveConfirmation, confirmedResponse]

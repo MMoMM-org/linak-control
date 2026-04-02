@@ -115,12 +115,26 @@ private func enableNotifications(using bleController: any BLEControllerProtocol)
 }
 
 private func firstHeightNotification(from bleController: any BLEControllerProtocol) async -> Int? {
-    for await data in bleController.notifications(for: DeskUUID.height) {
-        if let (heightMM, _) = parseHeightNotification(data) {
-            return heightMM
+    // Race the height stream against a 3-second timeout. The desk may not send
+    // a height notification until it moves, so we must not block the handshake.
+    await withTaskGroup(of: Int?.self) { group in
+        group.addTask {
+            for await data in bleController.notifications(for: DeskUUID.height) {
+                if let (heightMM, _) = parseHeightNotification(data) {
+                    return heightMM
+                }
+            }
+            return nil
         }
+        group.addTask {
+            try? await Task.sleep(for: .seconds(3))
+            return nil
+        }
+        // First to finish wins; cancel the other.
+        let result = await group.next() ?? nil
+        group.cancelAll()
+        return result
     }
-    return nil
 }
 
 /// Reads the USER_ID from the desk, ensures byte 0 is 0x01, and writes it back
@@ -138,11 +152,12 @@ private func activateDPGSession(
     FileLog.debug("handshake: USER_ID response = [\(hex)] (\(userIdResponse.count) bytes)", category: "handshake")
 
     // Build the user data payload for the write-back.
-    // The response contains [status, ...userData]. Extract everything after byte 0.
-    // If the response is an error (0x0b) or empty, use a default payload.
+    // DPG response format: [status, length, ...payload].
+    // Extract payload (skip status + length bytes).
+    // If the response is an error (0x0b) or too short, use a default payload.
     var userData: Data
-    if userIdResponse.count > 1 && userIdResponse[0] != 0x0b {
-        userData = Data(userIdResponse[1...])
+    if userIdResponse.count > 2 && userIdResponse[0] != 0x0b {
+        userData = Data(userIdResponse[2...])
     } else {
         // Desk hasn't been initialized yet -- use a minimal default.
         userData = Data([0x01])
