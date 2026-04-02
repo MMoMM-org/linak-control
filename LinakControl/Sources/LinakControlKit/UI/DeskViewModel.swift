@@ -97,19 +97,35 @@ public final class DeskViewModel: ObservableObject {
     // MARK: - Actions
 
     public func goToPreset(index: Int) {
-        Task { try? await deskManager.goToPreset(index: index) }
+        FileLog.debug("goToPreset(\(index))", category: "ui")
+        Task {
+            do { try await deskManager.goToPreset(index: index) }
+            catch { FileLog.debug("goToPreset FAILED: \(error)", category: "ui") }
+        }
     }
 
     public func moveUp() {
-        Task { try? await deskManager.moveUp(mode: autoRunUp) }
+        FileLog.debug("moveUp(mode: \(autoRunUp))", category: "ui")
+        Task {
+            do { try await deskManager.moveUp(mode: autoRunUp) }
+            catch { FileLog.debug("moveUp FAILED: \(error)", category: "ui") }
+        }
     }
 
     public func moveDown() {
-        Task { try? await deskManager.moveDown(mode: autoRunDown) }
+        FileLog.debug("moveDown(mode: \(autoRunDown))", category: "ui")
+        Task {
+            do { try await deskManager.moveDown(mode: autoRunDown) }
+            catch { FileLog.debug("moveDown FAILED: \(error)", category: "ui") }
+        }
     }
 
     public func stop() {
-        Task { try? await deskManager.stop() }
+        FileLog.debug("stop()", category: "ui")
+        Task {
+            do { try await deskManager.stop() }
+            catch { FileLog.debug("stop FAILED: \(error)", category: "ui") }
+        }
     }
 
     public func savePreset(index: Int) {

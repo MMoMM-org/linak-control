@@ -20,6 +20,7 @@ extension DeskManager {
 
     /// Validates connection, cancels any prior movement, then starts a new movement task.
     func startMovement(_ direction: MoveDirection, mode: RunMode) async throws {
+        FileLog.debug("startMovement(\(direction), mode: \(mode))", category: "core")
         try requireConnected()
         await cancelMovementTask()
 
