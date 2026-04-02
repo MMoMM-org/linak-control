@@ -25,3 +25,8 @@ Feature branch `feat/linak-control-impl` has 65+ commits. Full implementation of
 - Fix flaky movement tests (inject TestClock)
 - Investigate correct base offset parsing from USER_ID or DESK_OFFSET response
 - Consider PR to main
+
+## Feature Backlog
+
+- Configurable hotkeys (currently hardcoded Ctrl+Opt+1-4/Up/Down in HotkeyManager.swift)
+- Option to hide Zone 2 (preset dropdown in menu bar) via Settings toggle
