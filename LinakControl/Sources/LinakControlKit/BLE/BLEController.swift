@@ -61,7 +61,8 @@ public final class BLEController: NSObject, BLEControllerProtocol, @unchecked Se
     // MARK: - BLEControllerProtocol — scan
 
     public func scanForPeripherals() -> AsyncStream<DiscoveredDesk> {
-        AsyncStream { [weak self] continuation in
+        FileLog.debug("scanForPeripherals() called", category: "ble")
+        return AsyncStream { [weak self] continuation in
             guard let self else {
                 continuation.finish()
                 return
@@ -69,6 +70,7 @@ public final class BLEController: NSObject, BLEControllerProtocol, @unchecked Se
             bleQueue.async {
                 self.scanContinuation?.finish()
                 self.scanContinuation = continuation
+                FileLog.debug("centralManager.scanForPeripherals starting", category: "ble")
                 self.centralManager.scanForPeripherals(
                     withServices: [DeskUUID.controlService],
                     options: nil
@@ -89,26 +91,32 @@ public final class BLEController: NSObject, BLEControllerProtocol, @unchecked Se
     // MARK: - BLEControllerProtocol — connect / disconnect
 
     public func connect(peripheralId: UUID) async throws {
+        FileLog.debug("connect(peripheralId: \(peripheralId)) called", category: "ble")
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             bleQueue.async { [weak self] in
                 guard let self else {
+                    FileLog.debug("connect: self deallocated", category: "ble")
                     continuation.resume(throwing: BLEError.connectionFailed)
                     return
                 }
 
-                guard let peripheral = centralManager
-                    .retrievePeripherals(withIdentifiers: [peripheralId]).first
-                else {
+                let peripherals = centralManager.retrievePeripherals(withIdentifiers: [peripheralId])
+                FileLog.debug("connect: retrievePeripherals returned \(peripherals.count) result(s)", category: "ble")
+
+                guard let peripheral = peripherals.first else {
+                    FileLog.debug("connect: no peripheral found for UUID", category: "ble")
                     continuation.resume(throwing: BLEError.connectionFailed)
                     return
                 }
 
+                FileLog.debug("connect: calling centralManager.connect for '\(peripheral.name ?? "unknown")'", category: "ble")
                 self.connectContinuation = continuation
                 self.connectedPeripheral = peripheral
                 peripheral.delegate = self
                 self.centralManager.connect(peripheral, options: nil)
             }
         }
+        FileLog.debug("connect: continuation resolved -- BLE connected + services discovered", category: "ble")
     }
 
     public func disconnect() {
@@ -243,6 +251,7 @@ extension BLEController: CBCentralManagerDelegate {
         case .poweredOn:     state = .poweredOn
         @unknown default:    state = .unknown
         }
+        FileLog.debug("centralManagerDidUpdateState: \(state)", category: "ble")
         stateContinuation?.yield(state)
     }
 
@@ -253,6 +262,7 @@ extension BLEController: CBCentralManagerDelegate {
         rssi RSSI: NSNumber
     ) {
         let name = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown"
+        FileLog.debug("didDiscover: '\(name)' id=\(peripheral.identifier) rssi=\(RSSI)", category: "ble")
         let desk = DiscoveredDesk(
             peripheralId: peripheral.identifier,
             name: name,
@@ -262,6 +272,7 @@ extension BLEController: CBCentralManagerDelegate {
     }
 
     public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        FileLog.debug("didConnect: '\(peripheral.name ?? "unknown")' -- discovering services", category: "ble")
         peripheral.discoverServices([
             DeskUUID.controlService,
             DeskUUID.dpgService,
@@ -276,6 +287,7 @@ extension BLEController: CBCentralManagerDelegate {
         error: Error?
     ) {
         let err = error.map { BLEError.connectFailure($0) } ?? BLEError.connectionFailed
+        FileLog.debug("didFailToConnect: \(error?.localizedDescription ?? "unknown")", category: "ble")
         connectContinuation?.resume(throwing: err)
         connectContinuation = nil
     }
@@ -285,6 +297,7 @@ extension BLEController: CBCentralManagerDelegate {
         didDisconnectPeripheral peripheral: CBPeripheral,
         error: Error?
     ) {
+        FileLog.debug("didDisconnect: '\(peripheral.name ?? "unknown")' error=\(error?.localizedDescription ?? "none")", category: "ble")
         cleanUpOnDisconnect()
     }
 }
@@ -295,11 +308,15 @@ extension BLEController: CBPeripheralDelegate {
 
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         if let error {
+            FileLog.debug("didDiscoverServices: ERROR \(error.localizedDescription)", category: "ble")
             connectContinuation?.resume(throwing: BLEError.connectFailure(error))
             connectContinuation = nil
             return
         }
+        let serviceIDs = (peripheral.services ?? []).map { $0.uuid.uuidString }
+        FileLog.debug("didDiscoverServices: \(serviceIDs)", category: "ble")
         guard let services = peripheral.services, !services.isEmpty else {
+            FileLog.debug("didDiscoverServices: no services found", category: "ble")
             connectContinuation?.resume(throwing: BLEError.connectionFailed)
             connectContinuation = nil
             return
@@ -319,6 +336,8 @@ extension BLEController: CBPeripheralDelegate {
             connectContinuation = nil
             return
         }
+        let charIDs = (service.characteristics ?? []).map { $0.uuid.uuidString }
+        FileLog.debug("didDiscoverCharacteristics for \(service.uuid.uuidString): \(charIDs)", category: "ble")
         for characteristic in service.characteristics ?? [] {
             discoveredCharacteristics[characteristic.uuid] = characteristic
         }
@@ -326,7 +345,9 @@ extension BLEController: CBPeripheralDelegate {
         // Resolve connect when all expected services have reported their characteristics
         let allServices = peripheral.services ?? []
         let allDiscovered = allServices.allSatisfy { $0.characteristics != nil }
+        FileLog.debug("allServicesDiscovered=\(allDiscovered) (\(allServices.count) services)", category: "ble")
         if allDiscovered {
+            FileLog.debug("connect continuation resolving -- all characteristics discovered", category: "ble")
             connectContinuation?.resume()
             connectContinuation = nil
         }

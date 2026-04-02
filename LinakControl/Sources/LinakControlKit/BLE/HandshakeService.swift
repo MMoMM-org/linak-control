@@ -58,26 +58,37 @@ private let dpgQueries: [DPGQuery] = [
 /// - Throws: `DeskError` for protocol violations or timeouts; `BLEError` for transport failures.
 public func performHandshake(using bleController: any BLEControllerProtocol) async throws -> HandshakeResult {
 
+    FileLog.debug("handshake: START", category: "handshake")
+
     // Step 1: Enable notifications
+    FileLog.debug("handshake: step 1 -- enabling notifications", category: "handshake")
     try await enableNotifications(using: bleController)
+    FileLog.debug("handshake: step 1 -- notifications enabled", category: "handshake")
 
     // Capture first height notification in background before issuing DPG queries
     let heightTask = Task<Int?, Never> { await firstHeightNotification(from: bleController) }
 
     // Step 2: Validate output mask
+    FileLog.debug("handshake: step 2 -- reading output mask", category: "handshake")
     let mask = try await bleController.read(DeskUUID.outputMask)
+    FileLog.debug("handshake: step 2 -- mask=\(mask.map { String(format: "%02x", $0) }.joined())", category: "handshake")
     guard mask == Data([0x01]) else {
+        FileLog.debug("handshake: ABORT -- unexpected mask value", category: "handshake")
         heightTask.cancel()
         throw DeskError.unexpectedMaskValue(mask)
     }
 
     // Step 3: Issue DPG queries and collect responses
+    FileLog.debug("handshake: step 3 -- issuing \(dpgQueries.count) DPG queries", category: "handshake")
     let dpgResponses = try await issueDPGQueries(using: bleController)
+    FileLog.debug("handshake: step 3 -- got \(dpgResponses.count) responses", category: "handshake")
 
     // Step 4: Parse results
     let capabilities = try parseCapabilitiesOrThrow(from: dpgResponses)
     let presetHeights = parsePresetHeights(from: dpgResponses)
     let currentHeight = await heightTask.value
+
+    FileLog.debug("handshake: DONE -- height=\(currentHeight.map(String.init) ?? "nil") presets=\(presetHeights)", category: "handshake")
 
     return HandshakeResult(
         capabilities: capabilities,
@@ -111,9 +122,11 @@ private func issueDPGQueries(
     let notificationBuffer = DPGNotificationBuffer(stream: dpgStream)
     var responses: [Data] = []
 
-    for query in dpgQueries {
+    for (i, query) in dpgQueries.enumerated() {
+        FileLog.debug("handshake: DPG query \(i+1)/\(dpgQueries.count) \(query.label)", category: "handshake")
         try await bleController.write(data: query.command, to: DeskUUID.dpg, type: .withResponse)
         let response = try await notificationBuffer.next()
+        FileLog.debug("handshake: DPG response \(i+1) = \(response.count) bytes", category: "handshake")
         responses.append(response)
     }
 

@@ -80,16 +80,22 @@ public actor DeskManager {
     /// - Parameter peripheralId: CoreBluetooth peripheral UUID from a scan result.
     /// - Throws: `BLEError` or `DeskError` on connection or handshake failure.
     public func connect(peripheralId: UUID) async throws {
+        FileLog.debug("connect: starting for \(peripheralId)", category: "core")
         isUserInitiatedDisconnect = false
         updateState { $0.connectionState = .connecting }
 
         do {
+            FileLog.debug("connect: BLE connect...", category: "core")
             try await bleController.connect(peripheralId: peripheralId)
+            FileLog.debug("connect: BLE connected, starting handshake...", category: "core")
             let result = try await performHandshake(using: bleController)
+            FileLog.debug("connect: handshake complete, applying result", category: "core")
             applyHandshakeResult(result, peripheralId: peripheralId)
             startHeightNotificationListener()
             startHeartbeat()
+            FileLog.debug("connect: DONE -- state=connected", category: "core")
         } catch {
+            FileLog.debug("connect: FAILED -- \(error)", category: "core")
             updateState { $0.connectionState = .disconnected }
             throw error
         }
