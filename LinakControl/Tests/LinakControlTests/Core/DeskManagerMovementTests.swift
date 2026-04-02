@@ -48,16 +48,15 @@ private func makeFiniteHeightStream() -> AsyncStream<Data> {
 final class DeskManagerManualUpTests: XCTestCase {
 
     func testManualUpSendsMoveUpCommandRepeatedly() async throws {
-        let testClock = TestClock()
-        let (manager, mock) = try await makeConnectedManager(clock: testClock)
+        let (manager, mock) = try await makeConnectedManager()
 
         try await manager.moveUp(mode: .manual)
         // Advance 400ms = 4 loop iterations at 100ms each
         for _ in 0..<4 {
-            await Task.yield()
-            testClock.advance(by: .milliseconds(100))
+            try await Task.sleep(for: .milliseconds(10))
+            try await Task.sleep(for: .milliseconds(100))
         }
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(10))
         try await manager.stop()
 
         let commandWrites = mock.writtenData.filter {
@@ -70,8 +69,7 @@ final class DeskManagerManualUpTests: XCTestCase {
     }
 
     func testManualUpSetsIsMovingTrue() async throws {
-        let testClock = TestClock()
-        let (manager, mock) = try await makeConnectedManager(clock: testClock)
+        let (manager, mock) = try await makeConnectedManager()
 
         try await manager.moveUp(mode: .manual)
 
@@ -82,8 +80,7 @@ final class DeskManagerManualUpTests: XCTestCase {
     }
 
     func testManualUpSetsMoveDirectionUp() async throws {
-        let testClock = TestClock()
-        let (manager, mock) = try await makeConnectedManager(clock: testClock)
+        let (manager, mock) = try await makeConnectedManager()
 
         try await manager.moveUp(mode: .manual)
 
@@ -94,8 +91,7 @@ final class DeskManagerManualUpTests: XCTestCase {
     }
 
     func testManualUpClearsTargetPreset() async throws {
-        let testClock = TestClock()
-        let (manager, mock) = try await makeConnectedManager(clock: testClock)
+        let (manager, mock) = try await makeConnectedManager()
 
         try await manager.moveUp(mode: .manual)
 
@@ -111,15 +107,14 @@ final class DeskManagerManualUpTests: XCTestCase {
 final class DeskManagerManualDownTests: XCTestCase {
 
     func testManualDownSendsMoveDownCommandRepeatedly() async throws {
-        let testClock = TestClock()
-        let (manager, mock) = try await makeConnectedManager(clock: testClock)
+        let (manager, mock) = try await makeConnectedManager()
 
         try await manager.moveDown(mode: .manual)
         for _ in 0..<4 {
-            await Task.yield()
-            testClock.advance(by: .milliseconds(100))
+            try await Task.sleep(for: .milliseconds(10))
+            try await Task.sleep(for: .milliseconds(100))
         }
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(10))
         try await manager.stop()
 
         let commandWrites = mock.writtenData.filter {
@@ -132,8 +127,7 @@ final class DeskManagerManualDownTests: XCTestCase {
     }
 
     func testManualDownSetsMoveDirectionDown() async throws {
-        let testClock = TestClock()
-        let (manager, mock) = try await makeConnectedManager(clock: testClock)
+        let (manager, mock) = try await makeConnectedManager()
 
         try await manager.moveDown(mode: .manual)
 
@@ -149,8 +143,7 @@ final class DeskManagerManualDownTests: XCTestCase {
 final class DeskManagerStopTests: XCTestCase {
 
     func testStopSendsStopCommandTwice() async throws {
-        let testClock = TestClock()
-        let (manager, mock) = try await makeConnectedManager(clock: testClock)
+        let (manager, mock) = try await makeConnectedManager()
         try await manager.moveUp(mode: .manual)
         // Clear handshake + movement writes to count stop writes cleanly
         let priorCount = mock.writtenData.count
@@ -167,8 +160,7 @@ final class DeskManagerStopTests: XCTestCase {
     }
 
     func testStopSetsIsMovingFalse() async throws {
-        let testClock = TestClock()
-        let (manager, _) = try await makeConnectedManager(clock: testClock)
+        let (manager, _) = try await makeConnectedManager()
         try await manager.moveUp(mode: .manual)
 
         try await manager.stop()
@@ -178,8 +170,7 @@ final class DeskManagerStopTests: XCTestCase {
     }
 
     func testStopClearsMoveDirection() async throws {
-        let testClock = TestClock()
-        let (manager, _) = try await makeConnectedManager(clock: testClock)
+        let (manager, _) = try await makeConnectedManager()
         try await manager.moveUp(mode: .manual)
 
         try await manager.stop()
@@ -208,8 +199,7 @@ final class DeskManagerStopTests: XCTestCase {
 final class DeskManagerAutoUpTests: XCTestCase {
 
     func testAutoUpSendsPreflightBeforeMoving() async throws {
-        let testClock = TestClock()
-        let (manager, mock) = try await makeConnectedManager(clock: testClock)
+        let (manager, mock) = try await makeConnectedManager()
         let priorCount = mock.writtenData.count
 
         try await manager.moveUp(mode: .auto)
@@ -222,16 +212,15 @@ final class DeskManagerAutoUpTests: XCTestCase {
     }
 
     func testAutoUpSendsMoveToMaxHeightRepeatedly() async throws {
-        let testClock = TestClock()
-        let (manager, mock) = try await makeConnectedManager(clock: testClock)
+        let (manager, mock) = try await makeConnectedManager()
         let expectedTarget = DeskCommand.moveTo(tenthsOfMm: DeskLimits.autoUpTargetTenths)
 
         try await manager.moveUp(mode: .auto)
         for _ in 0..<4 {
-            await Task.yield()
-            testClock.advance(by: .milliseconds(100))
+            try await Task.sleep(for: .milliseconds(10))
+            try await Task.sleep(for: .milliseconds(100))
         }
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(10))
         try await manager.stop()
 
         let heartbeatWrites = mock.writtenData.filter {
@@ -247,8 +236,7 @@ final class DeskManagerAutoUpTests: XCTestCase {
 final class DeskManagerAutoDownTests: XCTestCase {
 
     func testAutoDownSendsPreflightBeforeMoving() async throws {
-        let testClock = TestClock()
-        let (manager, mock) = try await makeConnectedManager(clock: testClock)
+        let (manager, mock) = try await makeConnectedManager()
         let priorCount = mock.writtenData.count
 
         try await manager.moveDown(mode: .auto)
@@ -261,16 +249,15 @@ final class DeskManagerAutoDownTests: XCTestCase {
     }
 
     func testAutoDownSendsMoveToMinHeightRepeatedly() async throws {
-        let testClock = TestClock()
-        let (manager, mock) = try await makeConnectedManager(clock: testClock)
+        let (manager, mock) = try await makeConnectedManager()
         let expectedTarget = DeskCommand.moveTo(tenthsOfMm: DeskLimits.autoDownTargetTenths)
 
         try await manager.moveDown(mode: .auto)
         for _ in 0..<4 {
-            await Task.yield()
-            testClock.advance(by: .milliseconds(100))
+            try await Task.sleep(for: .milliseconds(10))
+            try await Task.sleep(for: .milliseconds(100))
         }
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(10))
         try await manager.stop()
 
         let heartbeatWrites = mock.writtenData.filter {
@@ -288,17 +275,16 @@ final class DeskManagerAutoDownTests: XCTestCase {
 final class DeskManagerMovementCancellationTests: XCTestCase {
 
     func testNewMovementCancelsPreviousMovement() async throws {
-        let testClock = TestClock()
-        let (manager, mock) = try await makeConnectedManager(clock: testClock)
+        let (manager, mock) = try await makeConnectedManager()
 
         // Start moving up
         try await manager.moveUp(mode: .manual)
         // Advance 200ms = 2 loop iterations
         for _ in 0..<2 {
-            await Task.yield()
-            testClock.advance(by: .milliseconds(100))
+            try await Task.sleep(for: .milliseconds(10))
+            try await Task.sleep(for: .milliseconds(100))
         }
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(10))
 
         // Capture how many up-commands were written before switching direction
         let upCountBefore = mock.writtenData.filter {
@@ -308,10 +294,10 @@ final class DeskManagerMovementCancellationTests: XCTestCase {
         // Start moving down — should cancel the up task
         try await manager.moveDown(mode: .manual)
         for _ in 0..<2 {
-            await Task.yield()
-            testClock.advance(by: .milliseconds(100))
+            try await Task.sleep(for: .milliseconds(10))
+            try await Task.sleep(for: .milliseconds(100))
         }
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(10))
         try await manager.stop()
 
         let upCountAfter = mock.writtenData.filter {
@@ -334,8 +320,7 @@ final class DeskManagerMovementCancellationTests: XCTestCase {
     }
 
     func testNewMovementSetsCorrectDirectionAfterSwitch() async throws {
-        let testClock = TestClock()
-        let (manager, _) = try await makeConnectedManager(clock: testClock)
+        let (manager, _) = try await makeConnectedManager()
 
         try await manager.moveUp(mode: .manual)
         try await manager.moveDown(mode: .manual)

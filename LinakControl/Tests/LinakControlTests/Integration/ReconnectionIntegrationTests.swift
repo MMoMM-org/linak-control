@@ -136,9 +136,8 @@ final class ReconnectionDuringMovementIntegrationTests: XCTestCase {
         let mock = MockBLEController()
         let manager = try await makeConnectedManager(mock: mock, clock: clock)
 
-        // Start a manual move to put the manager into moving state
+        // Start a manual move — isMoving is set synchronously by the actor.
         try await manager.moveUp(mode: .manual)
-        try await Task.sleep(for: .milliseconds(50))
 
         let stateWhileMoving = await manager.currentState
         XCTAssertTrue(stateWhileMoving.isMoving, "Precondition: manager should be moving")

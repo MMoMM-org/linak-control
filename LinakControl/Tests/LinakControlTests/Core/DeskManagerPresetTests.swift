@@ -54,25 +54,16 @@ private func makePresetDPGStream() -> AsyncStream<Data> {
 final class DeskManagerPresetHappyPathTests: XCTestCase {
 
     func testGoToPresetSendsPreflightBeforeMoveToCommands() async throws {
-        let testClock = TestClock()
-        let setup = try await makePresetTestSetup(clock: testClock)
+        let setup = try await makePresetTestSetup()
         let priorCount = setup.mock.writtenData.count
 
-        // Start moving to preset 2 (1105mm) in a background task
         let goToTask = Task { try await setup.manager.goToPreset(index: 2) }
-
-        // Advance past the preflight delay (100ms)
-        await Task.yield()
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(50))
 
         // Emit arrival height to let the loop terminate
         setup.heightCont.yield(makeHeightPacket(mm: 1103))
-        // Advance to let the loop iteration check arrival
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(150))
         setup.heightCont.finish()
-
         try await goToTask.value
 
         let postWrites = Array(setup.mock.writtenData.dropFirst(priorCount))
@@ -107,25 +98,23 @@ final class DeskManagerPresetHappyPathTests: XCTestCase {
     }
 
     func testGoToPresetSetsTargetPresetDuringMovement() async throws {
-        let testClock = TestClock()
-        let setup = try await makePresetTestSetup(clock: testClock)
+        let setup = try await makePresetTestSetup()
 
         let goToTask = Task { try await setup.manager.goToPreset(index: 2) }
 
-        // Advance past preflight delay so goToPreset sets state and starts the loop
-        await Task.yield()
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
+        // Wait until goToPreset sets isMoving (polls actor state).
+        await waitFor(timeout: 2.0) {
+            let s = await setup.manager.currentState
+            return s.isMoving
+        }
 
-        // Check state during movement (before arrival)
         let movingState = await setup.manager.currentState
         XCTAssertEqual(movingState.targetPreset, 2)
         XCTAssertTrue(movingState.isMoving)
 
         // Emit arrival and finish
         setup.heightCont.yield(makeHeightPacket(mm: 1105))
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(150))
         setup.heightCont.finish()
         try await goToTask.value
     }
@@ -222,42 +211,41 @@ final class DeskManagerPresetNotConnectedTests: XCTestCase {
 final class DeskManagerPresetCancellationTests: XCTestCase {
 
     func testNewGoToPresetCancelsPreviousMove() async throws {
-        let testClock = TestClock()
-        let setup = try await makePresetTestSetup(clock: testClock)
+        let setup = try await makePresetTestSetup()
 
-        // Start moving to preset 1 (730mm) — won't arrive (no matching height emitted)
-        let firstTask = Task { try? await setup.manager.goToPreset(index: 1) }
+        // Start moving to preset 2 (1105mm) — desk is at 730mm so won't arrive
+        let firstTask = Task { try? await setup.manager.goToPreset(index: 2) }
 
-        // Advance past preflight delay to let first goToPreset set state
-        await Task.yield()
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
+        // Wait until first goToPreset sets state
+        await waitFor { (await setup.manager.currentState).targetPreset == 2 }
 
-        // Verify first move is active
         let midState = await setup.manager.currentState
-        XCTAssertEqual(midState.targetPreset, 1, "First goToPreset must set targetPreset to 1")
+        XCTAssertEqual(midState.targetPreset, 2, "First goToPreset must set targetPreset to 2")
 
-        // Start moving to preset 2 (1105mm) — must cancel the first
-        let secondTask = Task { try await setup.manager.goToPreset(index: 2) }
+        // Start moving to preset 3 (900mm) — must cancel the first
+        let secondTask = Task { try await setup.manager.goToPreset(index: 3) }
 
         // Advance past second preflight delay and let actor process
-        await Task.yield()
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(10))
+        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(10))
         // One more advance to ensure the second goToPreset has fully set state
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(10))
+
+        // Wait for second goToPreset to take over
+        await waitFor { (await setup.manager.currentState).targetPreset == 3 }
 
         let switchedState = await setup.manager.currentState
         XCTAssertEqual(
-            switchedState.targetPreset, 2,
-            "Second goToPreset must cancel first and switch targetPreset to 2"
+            switchedState.targetPreset, 3,
+            "Second goToPreset must cancel first and switch targetPreset to 3"
         )
 
-        // Emit arrival for preset 2 and clean up
-        setup.heightCont.yield(makeHeightPacket(mm: 1105))
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
+        // Emit arrival for preset 3 and clean up
+        setup.heightCont.yield(makeHeightPacket(mm: 900))
+        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(10))
         setup.heightCont.finish()
 
         try await secondTask.value
@@ -266,16 +254,15 @@ final class DeskManagerPresetCancellationTests: XCTestCase {
     }
 
     func testStopCancelsPresetMove() async throws {
-        let testClock = TestClock()
-        let setup = try await makePresetTestSetup(clock: testClock)
+        let setup = try await makePresetTestSetup()
 
         // Start a preset move that won't arrive naturally
         let goToTask = Task { try? await setup.manager.goToPreset(index: 2) }
 
         // Advance past preflight delay to let goToPreset start the control loop
-        await Task.yield()
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(10))
+        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(10))
 
         // stop() must cancel the preset move and clear state
         try await setup.manager.stop()
@@ -381,16 +368,15 @@ final class DeskManagerPresetTimeoutTests: XCTestCase {
     ///
     /// Uses TestClock to advance past the 30s timeout deterministically.
     func testGoToPresetTimesOutWhenNoArrival() async throws {
-        let testClock = TestClock()
-        let setup = try await makePresetTestSetup(clock: testClock)
+        let setup = try await makePresetTestSetup()
 
         // Start moving to preset 2 (1105mm) — never emit arrival height.
         let goToTask = Task { try? await setup.manager.goToPreset(index: 2) }
 
         // Advance past preflight delay
-        await Task.yield()
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(10))
+        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: .milliseconds(10))
 
         let midState = await setup.manager.currentState
         XCTAssertTrue(midState.isMoving, "isMoving must be true during preset move")

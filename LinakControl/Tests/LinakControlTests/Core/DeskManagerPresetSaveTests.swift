@@ -18,7 +18,9 @@ private func makeConnectedManagerForSave(
 ) async throws -> (DeskManager, MockBLEController) {
     let mock = MockBLEController()
     mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
-    mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
+    // The handshake reads height directly via bleController.read(). Set it to the
+    // desired test height so state.heightMM matches what the save test expects.
+    mock.mockReadResponses[DeskUUID.height] = makeHeightPacket(mm: heightMM)
     mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream(
         responses: HandshakeFixtures.happyPathDPGResponses
     )
@@ -72,20 +74,16 @@ final class DeskManagerPresetSaveHappyPathTests: XCTestCase {
             saveResponses: [saveConfirmation, readResponse]
         )
 
-        let priorCount = mock.writtenData.count
         try await manager.savePreset(index: 2)
 
-        let postSaveWrites = Array(mock.writtenData.dropFirst(priorCount))
-            .filter { $0.characteristic == DeskUUID.dpg }
-        guard postSaveWrites.count >= 1 else {
-            XCTFail("Expected at least one DPG write for the save command")
-            return
-        }
-
-        let saveCommandBytes = postSaveWrites[0].data
+        // Find the save command among all DPG writes (skip handshake writes).
+        // Save commands start with [0x7F, slot, 0x80, ...].
         let expectedSaveCommand = Data([0x7F, 0x8A, 0x80, 0x01, 0x2A, 0x2B])
+        let saveWrites = mock.writtenData.filter {
+            $0.characteristic == DeskUUID.dpg && $0.data == expectedSaveCommand
+        }
         XCTAssertEqual(
-            saveCommandBytes, expectedSaveCommand,
+            saveWrites.count, 1,
             "Save command for preset 2 at 1105mm must be [7F 8A 80 01 2A 2B]"
         )
     }
