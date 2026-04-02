@@ -100,7 +100,17 @@ public func performHandshake(using bleController: any BLEControllerProtocol) asy
     let capabilities = try parseCapabilitiesOrThrow(from: dpgResponses)
     let deskOffsetMM = parseDeskOffset(from: dpgResponses)
     let presetHeights = parsePresetHeights(from: dpgResponses)
-    let currentHeight = await heightTask.value
+
+    // Prefer height from notification; fall back to direct characteristic read
+    // when the desk is stationary and sends no notifications.
+    var currentHeight = await heightTask.value
+    if currentHeight == nil {
+        FileLog.debug("handshake: no height notification, reading characteristic directly", category: "handshake")
+        if let data = try? await bleController.read(DeskUUID.height),
+           let (h, _) = parseHeightNotification(data) {
+            currentHeight = h
+        }
+    }
 
     FileLog.debug("handshake: DONE -- height=\(currentHeight.map(String.init) ?? "nil") offset=\(deskOffsetMM.map(String.init) ?? "nil") presets=\(presetHeights)", category: "handshake")
 

@@ -150,6 +150,9 @@ private struct DeskOffsetSection: View {
                     }
                 Text("cm")
                     .foregroundColor(.secondary)
+                Button("Apply") { applyOffset() }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
             }
 
             Text("Height at lowest desk position")
@@ -187,7 +190,7 @@ private struct MovementModeSection: View {
 
             HStack {
                 Text("Up:")
-                    .frame(width: 36, alignment: .leading)
+                    .frame(width: 46, alignment: .leading)
                 Picker("Up mode", selection: Binding(
                     get: { viewModel.autoRunUp },
                     set: { viewModel.updateAutoRunUp($0) }
@@ -201,7 +204,7 @@ private struct MovementModeSection: View {
 
             HStack {
                 Text("Down:")
-                    .frame(width: 36, alignment: .leading)
+                    .frame(width: 46, alignment: .leading)
                 Picker("Down mode", selection: Binding(
                     get: { viewModel.autoRunDown },
                     set: { viewModel.updateAutoRunDown($0) }
