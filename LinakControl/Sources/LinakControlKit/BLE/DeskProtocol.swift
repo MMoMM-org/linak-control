@@ -118,6 +118,16 @@ public enum DeskProtocol {
         return Int(rawOffset) / 10
     }
 
+    /// Parse the base height offset from a USER_ID (0x81) response.
+    /// The offset is stored as LE uint16 in 0.1mm units at bytes [3:4].
+    /// Returns nil when data is too short.
+    public static func parseBaseOffset(fromUserID data: Data) -> Int? {
+        guard data.count >= 5 else { return nil }
+        let raw = UInt16(data[3]) | (UInt16(data[4]) << 8)
+        guard raw != 0 else { return nil }
+        return Int(raw) / 10
+    }
+
     // MARK: - Encoding
 
     /// Encode a target height in mm as a 2-byte little-endian uint16 (0.1 mm units)

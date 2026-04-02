@@ -161,6 +161,33 @@ final class ParseCapabilitiesTests: XCTestCase {
     }
 }
 
+// MARK: - parseBaseOffset
+
+final class ParseBaseOffsetTests: XCTestCase {
+
+    func testRealUserIDResponse680mm() {
+        // [0x01, 0x03, 0x01, 0x90, 0x1A] -> bytes[3:4] = 0x1A90 = 6800 tenths = 680mm
+        let data = makeData([0x01, 0x03, 0x01, 0x90, 0x1A])
+        XCTAssertEqual(DeskProtocol.parseBaseOffset(fromUserID: data), 680)
+    }
+
+    func testRealUserIDResponse660mm() {
+        // [0x01, 0x03, 0x01, 0xCE, 0x19] -> bytes[3:4] = 0x19CE = 6606 tenths = 660mm
+        let data = makeData([0x01, 0x03, 0x01, 0xCE, 0x19])
+        XCTAssertEqual(DeskProtocol.parseBaseOffset(fromUserID: data), 660)
+    }
+
+    func testDataTooShortReturnsNil() {
+        XCTAssertNil(DeskProtocol.parseBaseOffset(fromUserID: makeData([0x01, 0x03, 0x01, 0x90])))
+        XCTAssertNil(DeskProtocol.parseBaseOffset(fromUserID: Data()))
+    }
+
+    func testZeroOffsetReturnsNil() {
+        let data = makeData([0x01, 0x03, 0x01, 0x00, 0x00])
+        XCTAssertNil(DeskProtocol.parseBaseOffset(fromUserID: data))
+    }
+}
+
 // MARK: - parseDeskOffset
 
 final class ParseDeskOffsetTests: XCTestCase {
