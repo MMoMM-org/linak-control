@@ -10,8 +10,7 @@ import Foundation
 // MARK: - Movement constants
 
 private let movementIntervalNanoseconds: UInt64 = 100_000_000   // 100 ms
-private let autoUpTargetTenths: UInt16 = 13500                  // 1350 mm max safe height
-private let autoDownTargetTenths: UInt16 = 6000                 // 600 mm min safe height
+// Auto targets defined in DeskLimits (DeskProtocol.swift) — single source of truth.
 
 // MARK: - DeskManager movement extension
 
@@ -109,8 +108,8 @@ extension DeskManager {
 
     private func autoTarget(for direction: MoveDirection) -> Data {
         switch direction {
-        case .up:   return DeskCommand.moveTo(tenthsOfMm: autoUpTargetTenths)
-        case .down: return DeskCommand.moveTo(tenthsOfMm: autoDownTargetTenths)
+        case .up:   return DeskCommand.moveTo(tenthsOfMm: DeskLimits.autoUpTargetTenths)
+        case .down: return DeskCommand.moveTo(tenthsOfMm: DeskLimits.autoDownTargetTenths)
         }
     }
 }

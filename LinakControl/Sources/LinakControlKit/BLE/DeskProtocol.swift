@@ -20,16 +20,23 @@ public struct DeskCapabilities: Sendable {
 
 // MARK: - Protocol Constants
 
-/// Valid raw position range in mm. The height characteristic (0x0021) reports
-/// values relative to the desk's lowest position. Typical travel is 0–650mm.
-/// We accept a wider band for sensor margin.
-private let validHeightRange = 0...7000
+/// Central desk protocol constants. All range checks and target calculations
+/// reference these values. Raw positions are relative to the desk's lowest point.
+public enum DeskLimits {
+    /// Valid raw position range in mm accepted from height notifications.
+    /// Typical travel is 0-650mm; wider band for sensor margin.
+    public static let validHeightRange: ClosedRange<Int> = 0...7000
 
-/// Safe raw command range in mm. Values outside this range are rejected by
-/// `encodeTargetHeight` to protect the desk mechanics.
-/// Typical desk travel is 0–~650mm from lowest position.
-/// Upper limit 6500mm is the uint16 safe boundary (6500 * 10 = 65000 < 65535).
-private let safeCommandRange = 0...6500
+    /// Safe raw command range in mm for move-to targets.
+    /// Upper limit 6500 keeps uint16 encoding safe (6500 * 10 = 65000 < 65535).
+    public static let safeCommandRange: ClosedRange<Int> = 0...6500
+
+    /// Auto-up target in 0.1mm units -- top of safe range.
+    public static let autoUpTargetTenths: UInt16 = UInt16(safeCommandRange.upperBound * 10)
+
+    /// Auto-down target in 0.1mm units -- bottom of safe range.
+    public static let autoDownTargetTenths: UInt16 = UInt16(safeCommandRange.lowerBound * 10)
+}
 
 // MARK: - Decoding
 
@@ -49,7 +56,7 @@ public func parseHeightNotification(_ data: Data) -> (heightMM: Int, speedMMS: I
 
     let heightMM = Int(rawPosition) / 10
 
-    guard validHeightRange.contains(heightMM) else { return nil }
+    guard DeskLimits.validHeightRange.contains(heightMM) else { return nil }
 
     return (heightMM: heightMM, speedMMS: Int(rawSpeed))
 }
@@ -112,7 +119,7 @@ public func parseDeskOffset(_ data: Data) -> Int? {
 ///
 /// Rejects values outside the safe command range (600...1350 mm) and returns nil.
 public func encodeTargetHeight(mm: Int) -> Data? {
-    guard safeCommandRange.contains(mm) else { return nil }
+    guard DeskLimits.safeCommandRange.contains(mm) else { return nil }
 
     let rawValue = UInt16(mm * 10)
     return Data([

@@ -215,7 +215,7 @@ final class DeskManagerAutoUpTests: XCTestCase {
 
     func testAutoUpSendsMoveToMaxHeightRepeatedly() async throws {
         let (manager, mock) = try await makeConnectedManager()
-        let expectedTarget = DeskCommand.moveTo(tenthsOfMm: 13500)
+        let expectedTarget = DeskCommand.moveTo(tenthsOfMm: DeskLimits.autoUpTargetTenths)
 
         try await manager.moveUp(mode: .auto)
         try await Task.sleep(for: .milliseconds(350))
@@ -226,7 +226,7 @@ final class DeskManagerAutoUpTests: XCTestCase {
         }
         XCTAssertGreaterThanOrEqual(
             heartbeatWrites.count, 2,
-            "Auto up should send move-to 1350mm repeatedly to targetHeartbeat characteristic"
+            "Auto up should send move-to max height repeatedly to targetHeartbeat characteristic"
         )
     }
 }
@@ -249,7 +249,7 @@ final class DeskManagerAutoDownTests: XCTestCase {
 
     func testAutoDownSendsMoveToMinHeightRepeatedly() async throws {
         let (manager, mock) = try await makeConnectedManager()
-        let expectedTarget = DeskCommand.moveTo(tenthsOfMm: 6000)
+        let expectedTarget = DeskCommand.moveTo(tenthsOfMm: DeskLimits.autoDownTargetTenths)
 
         try await manager.moveDown(mode: .auto)
         try await Task.sleep(for: .milliseconds(350))
@@ -260,7 +260,7 @@ final class DeskManagerAutoDownTests: XCTestCase {
         }
         XCTAssertGreaterThanOrEqual(
             heartbeatWrites.count, 2,
-            "Auto down should send move-to 600mm repeatedly to targetHeartbeat characteristic"
+            "Auto down should send move-to min height repeatedly to targetHeartbeat characteristic"
         )
     }
 }
