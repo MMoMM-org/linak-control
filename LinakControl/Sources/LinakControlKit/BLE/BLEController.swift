@@ -100,6 +100,13 @@ public final class BLEController: NSObject, BLEControllerProtocol, @unchecked Se
                     return
                 }
 
+                // Reject concurrent connect attempts.
+                guard self.connectContinuation == nil else {
+                    FileLog.debug("connect: rejected -- another connect in progress", category: "ble")
+                    continuation.resume(throwing: BLEError.connectionFailed)
+                    return
+                }
+
                 let peripherals = centralManager.retrievePeripherals(withIdentifiers: [peripheralId])
                 FileLog.debug("connect: retrievePeripherals returned \(peripherals.count) result(s)", category: "ble")
 
@@ -225,11 +232,32 @@ public final class BLEController: NSObject, BLEControllerProtocol, @unchecked Se
 
     // MARK: - Private helpers
 
+    /// Atomically removes and returns the stored connect continuation.
+    /// Prevents double-resume when disconnect and characteristic-discovery race.
+    private func takeConnectContinuation() -> CheckedContinuation<Void, Error>? {
+        defer { connectContinuation = nil }
+        return connectContinuation
+    }
+
+    /// Atomically removes and returns a stored write continuation for a UUID.
+    private func takeWriteContinuation(for uuid: CBUUID) -> CheckedContinuation<Void, Error>? {
+        return writeContinuations.removeValue(forKey: uuid)
+    }
+
+    /// Atomically removes and returns a stored read continuation for a UUID.
+    private func takeReadContinuation(for uuid: CBUUID) -> CheckedContinuation<Data, Error>? {
+        return readContinuations.removeValue(forKey: uuid)
+    }
+
+    /// Atomically removes and returns a stored notify continuation for a UUID.
+    private func takeNotifyContinuation(for uuid: CBUUID) -> CheckedContinuation<Void, Error>? {
+        return notifyContinuations.removeValue(forKey: uuid)
+    }
+
     private func cleanUpOnDisconnect() {
         connectedPeripheral = nil
         discoveredCharacteristics = [:]
-        connectContinuation?.resume(throwing: BLEError.connectionFailed)
-        connectContinuation = nil
+        takeConnectContinuation()?.resume(throwing: BLEError.connectionFailed)
         for (_, cont) in writeContinuations { cont.resume(throwing: BLEError.notConnected) }
         writeContinuations = [:]
         for (_, cont) in readContinuations { cont.resume(throwing: BLEError.notConnected) }
@@ -293,8 +321,7 @@ extension BLEController: CBCentralManagerDelegate {
     ) {
         let err = error.map { BLEError.connectFailure($0) } ?? BLEError.connectionFailed
         FileLog.debug("didFailToConnect: \(error?.localizedDescription ?? "unknown")", category: "ble")
-        connectContinuation?.resume(throwing: err)
-        connectContinuation = nil
+        takeConnectContinuation()?.resume(throwing: err)
     }
 
     public func centralManager(
@@ -314,16 +341,14 @@ extension BLEController: CBPeripheralDelegate {
     public func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         if let error {
             FileLog.debug("didDiscoverServices: ERROR \(error.localizedDescription)", category: "ble")
-            connectContinuation?.resume(throwing: BLEError.connectFailure(error))
-            connectContinuation = nil
+            takeConnectContinuation()?.resume(throwing: BLEError.connectFailure(error))
             return
         }
         let serviceIDs = (peripheral.services ?? []).map { $0.uuid.uuidString }
         FileLog.debug("didDiscoverServices: \(serviceIDs)", category: "ble")
         guard let services = peripheral.services, !services.isEmpty else {
             FileLog.debug("didDiscoverServices: no services found", category: "ble")
-            connectContinuation?.resume(throwing: BLEError.connectionFailed)
-            connectContinuation = nil
+            takeConnectContinuation()?.resume(throwing: BLEError.connectionFailed)
             return
         }
         for service in services {
@@ -337,8 +362,7 @@ extension BLEController: CBPeripheralDelegate {
         error: Error?
     ) {
         if let error {
-            connectContinuation?.resume(throwing: BLEError.connectFailure(error))
-            connectContinuation = nil
+            takeConnectContinuation()?.resume(throwing: BLEError.connectFailure(error))
             return
         }
         let charIDs = (service.characteristics ?? []).map { $0.uuid.uuidString }
@@ -348,14 +372,12 @@ extension BLEController: CBPeripheralDelegate {
         }
 
         // Resolve connect when all expected services have reported their characteristics.
-        // Guard on connectContinuation to avoid multiple resumes when services are cached.
         let allServices = peripheral.services ?? []
         let allDiscovered = allServices.allSatisfy { $0.characteristics != nil }
         FileLog.debug("allServicesDiscovered=\(allDiscovered) (\(allServices.count) services) hasContinuation=\(connectContinuation != nil)", category: "ble")
-        if allDiscovered, let continuation = connectContinuation {
-            connectContinuation = nil
+        if allDiscovered {
             FileLog.debug("connect continuation resolving -- all characteristics discovered", category: "ble")
-            continuation.resume()
+            takeConnectContinuation()?.resume()
         }
     }
 
@@ -364,7 +386,7 @@ extension BLEController: CBPeripheralDelegate {
         didWriteValueFor characteristic: CBCharacteristic,
         error: Error?
     ) {
-        guard let continuation = writeContinuations.removeValue(forKey: characteristic.uuid) else { return }
+        guard let continuation = takeWriteContinuation(for: characteristic.uuid) else { return }
         if let error {
             continuation.resume(throwing: BLEError.writeFailure(error))
         } else {
@@ -378,7 +400,7 @@ extension BLEController: CBPeripheralDelegate {
         error: Error?
     ) {
         // Read continuation takes priority over notification stream
-        if let readCont = readContinuations.removeValue(forKey: characteristic.uuid) {
+        if let readCont = takeReadContinuation(for: characteristic.uuid) {
             if let error {
                 readCont.resume(throwing: BLEError.readFailure(error))
             } else {
@@ -398,7 +420,7 @@ extension BLEController: CBPeripheralDelegate {
         didUpdateNotificationStateFor characteristic: CBCharacteristic,
         error: Error?
     ) {
-        guard let continuation = notifyContinuations.removeValue(forKey: characteristic.uuid) else { return }
+        guard let continuation = takeNotifyContinuation(for: characteristic.uuid) else { return }
         if let error {
             continuation.resume(throwing: BLEError.notifyFailure(error))
         } else {

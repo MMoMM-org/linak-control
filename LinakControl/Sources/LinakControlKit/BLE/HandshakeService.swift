@@ -87,7 +87,7 @@ public func performHandshake(using bleController: any BLEControllerProtocol) asy
     // Step 3: Activate DPG session via USER_ID read + write
     FileLog.debug("handshake: step 3 -- activating DPG session (USER_ID init)", category: "handshake")
     let dpgStream = bleController.notifications(for: DeskUUID.dpg)
-    let notificationBuffer = DPGNotificationBuffer(stream: dpgStream)
+    let notificationBuffer = TimedStreamBuffer(stream: dpgStream)
     try await activateDPGSession(using: bleController, buffer: notificationBuffer)
     FileLog.debug("handshake: step 3 -- DPG session activated", category: "handshake")
 
@@ -158,7 +158,7 @@ private func firstHeightNotification(from bleController: any BLEControllerProtoc
 /// error responses to all DPG queries.
 private func activateDPGSession(
     using bleController: any BLEControllerProtocol,
-    buffer: DPGNotificationBuffer
+    buffer: TimedStreamBuffer
 ) async throws {
     // Read current USER_ID
     FileLog.debug("handshake: USER_ID read", category: "handshake")
@@ -202,7 +202,7 @@ private func activateDPGSession(
 
 private func issueDPGQueries(
     using bleController: any BLEControllerProtocol,
-    buffer: DPGNotificationBuffer
+    buffer: TimedStreamBuffer
 ) async throws -> [Data] {
     var responses: [Data] = []
 
@@ -218,40 +218,7 @@ private func issueDPGQueries(
     return responses
 }
 
-// MARK: - DPGNotificationBuffer
-
-/// Wraps an AsyncStream iterator to allow safe consumption from sequential async calls
-/// with per-element timeout support. Uses a class to avoid inout-capture issues.
-private final class DPGNotificationBuffer: @unchecked Sendable {
-
-    private var iterator: AsyncStream<Data>.AsyncIterator
-
-    init(stream: AsyncStream<Data>) {
-        self.iterator = stream.makeAsyncIterator()
-    }
-
-    /// Returns the next notification value, or throws `DeskError.handshakeTimeout` if
-    /// no value arrives within 1 second.
-    func next() async throws -> Data {
-        try await withThrowingTaskGroup(of: Data.self) { group in
-            // Capture self (the buffer), not the inout iterator.
-            group.addTask { [self] in
-                guard let value = await self.iterator.next() else {
-                    throw DeskError.handshakeTimeout
-                }
-                return value
-            }
-            group.addTask {
-                try await Task.sleep(for: .seconds(1))
-                throw DeskError.handshakeTimeout
-            }
-
-            let result = try await group.next()!
-            group.cancelAll()
-            return result
-        }
-    }
-}
+// TimedStreamBuffer is now TimedStreamBuffer (Util/TimedStreamBuffer.swift).
 
 private func parseCapabilitiesOrThrow(from responses: [Data]) throws -> DeskCapabilities {
     // responses[0] is the GET_CAPABILITIES (7F 80) response

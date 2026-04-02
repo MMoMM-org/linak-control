@@ -37,7 +37,7 @@ extension DeskManager {
         }
 
         let dpgStream = bleController.notifications(for: DeskUUID.dpg)
-        let buffer = DPGResponseBuffer(stream: dpgStream)
+        let buffer = TimedStreamBuffer(stream: dpgStream)
 
         try await bleController.write(data: saveCommand, to: DeskUUID.dpg, type: .withResponse)
         _ = try await buffer.next()
@@ -57,38 +57,4 @@ extension DeskManager {
     }
 }
 
-// MARK: - DPGResponseBuffer
-
-/// Consumes one notification at a time from a DPG AsyncStream.
-///
-/// Uses a class so the iterator is shared across sequential async calls
-/// without requiring inout capture.
-private final class DPGResponseBuffer: @unchecked Sendable {
-
-    private var iterator: AsyncStream<Data>.AsyncIterator
-
-    init(stream: AsyncStream<Data>) {
-        self.iterator = stream.makeAsyncIterator()
-    }
-
-    /// Returns the next DPG notification, or throws `DeskError.handshakeTimeout`
-    /// if no value arrives within 1 second.
-    func next() async throws -> Data {
-        try await withThrowingTaskGroup(of: Data.self) { group in
-            group.addTask { [self] in
-                guard let value = await self.iterator.next() else {
-                    throw DeskError.handshakeTimeout
-                }
-                return value
-            }
-            group.addTask {
-                try await Task.sleep(for: .seconds(1))
-                throw DeskError.handshakeTimeout
-            }
-
-            let result = try await group.next()!
-            group.cancelAll()
-            return result
-        }
-    }
-}
+// DPGResponseBuffer replaced by shared TimedStreamBuffer (Util/TimedStreamBuffer.swift).

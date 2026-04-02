@@ -319,12 +319,8 @@ public final class DeskViewModel: ObservableObject {
         connectionState = snapshot.connectionState
         heightMM = snapshot.heightMM
 
-        // Load the user's persisted offset from config — never overwrite with the
-        // handshake-parsed value, which may be incorrect (e.g. 1413mm != real offset).
-        let config = (try? configStore.load()) ?? .default
-        if config.deskOffsetMM > 0 {
-            deskOffsetMM = config.deskOffsetMM
-        }
+        // deskOffsetMM is set in init() from config and updated only via
+        // updateDeskOffset(). No config I/O here — apply() runs at ~10Hz.
 
         let offset = deskOffsetMM
         heightDisplay = snapshot.heightMM.map {
