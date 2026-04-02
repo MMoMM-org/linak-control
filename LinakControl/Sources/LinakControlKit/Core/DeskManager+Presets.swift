@@ -128,8 +128,10 @@ extension DeskManager {
 
     /// Clears movement and target state after the control loop completes.
     private func clearPresetMoveState() {
+        FileLog.debug("clearPresetMoveState: height=\(state.heightMM.map(String.init) ?? "nil")", category: "core")
         updateState {
             $0.isMoving = false
+            $0.moveDirection = nil
             $0.targetPreset = nil
         }
     }

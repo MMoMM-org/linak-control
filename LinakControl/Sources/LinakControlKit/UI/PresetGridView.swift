@@ -60,21 +60,20 @@ private struct PresetCell: View {
     private var hasHeight: Bool { preset.heightMM != nil }
 
     var body: some View {
-        Button {
-            guard hasHeight else { return }
-            onTap()
-        } label: {
-            VStack(spacing: 2) {
-                Text("\(preset.index)")
-                    .font(.headline)
-                Text(heightText)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+        VStack(spacing: 2) {
+            Text("\(preset.index)")
+                .font(.headline)
+            Text(heightText)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            if isTarget {
+                Text("Moving...")
+                    .font(.caption2)
+                    .foregroundColor(.accentColor)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
         .background(cellBackground)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(
@@ -82,13 +81,23 @@ private struct PresetCell: View {
                 .stroke(isActive ? Color.accentColor : Color.clear, lineWidth: 2)
         )
         .scaleEffect(isPulsing ? 0.96 : 1.0)
-        .opacity(isConnected ? 1.0 : 0.4)
-        .disabled(!isConnected || !hasHeight)
+        .opacity(cellOpacity)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard isConnected, hasHeight else { return }
+            onTap()
+        }
         .onChange(of: isTarget) { newValue in
             withAnimation(newValue ? pulseAnimation : .default) {
                 isPulsing = newValue
             }
         }
+    }
+
+    private var cellOpacity: Double {
+        if !isConnected { return 0.4 }
+        if !hasHeight { return 0.4 }
+        return 1.0
     }
 
     private var cellBackground: Color {

@@ -315,13 +315,15 @@ public final class DeskViewModel: ObservableObject {
     }
 
     private func apply(_ snapshot: DeskState) {
+        FileLog.debug("apply: state=\(snapshot.connectionState) height=\(snapshot.heightMM.map(String.init) ?? "nil") moving=\(snapshot.isMoving) activePreset=\(snapshot.activePreset.map(String.init) ?? "nil")", category: "ui")
         connectionState = snapshot.connectionState
         heightMM = snapshot.heightMM
 
-        // Only adopt the handshake offset when no user-configured offset exists.
-        // The user's manual setting (persisted in config) takes priority.
-        if deskOffsetMM == 0 && snapshot.deskOffsetMM > 0 {
-            deskOffsetMM = snapshot.deskOffsetMM
+        // Load the user's persisted offset from config — never overwrite with the
+        // handshake-parsed value, which may be incorrect (e.g. 1413mm != real offset).
+        let config = (try? configStore.load()) ?? .default
+        if config.deskOffsetMM > 0 {
+            deskOffsetMM = config.deskOffsetMM
         }
 
         let offset = deskOffsetMM
