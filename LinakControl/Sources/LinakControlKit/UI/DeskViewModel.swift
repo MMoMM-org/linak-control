@@ -181,14 +181,24 @@ public final class DeskViewModel: ObservableObject {
     /// Reads the paired desk UUID from `ConfigStore`. If no paired desk is
     /// configured, triggers a scan (first-run scenario).
     public func retryConnection() {
+        guard connectionState != .connecting && connectionState != .connected else {
+            FileLog.debug("retryConnection: ignored -- already \(connectionState)", category: "ui")
+            return
+        }
         Task {
             let config = try? configStore.load()
             guard let uuidString = config?.pairedDeskUUID,
                   let peripheralId = UUID(uuidString: uuidString) else {
+                FileLog.debug("retryConnection: no paired desk UUID, starting scan", category: "ui")
                 _ = await deskManager.scan()
                 return
             }
-            try? await deskManager.connect(peripheralId: peripheralId)
+            FileLog.debug("retryConnection: connecting to \(uuidString)", category: "ui")
+            do {
+                try await deskManager.connect(peripheralId: peripheralId)
+            } catch {
+                FileLog.debug("retryConnection: FAILED -- \(error)", category: "ui")
+            }
         }
     }
 

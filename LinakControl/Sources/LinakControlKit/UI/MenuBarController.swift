@@ -140,7 +140,8 @@ public final class MenuBarController: NSObject {
     // MARK: - Helpers
 
     private func zone1Image(for state: ConnectionState) -> NSImage? {
-        let name = "rectangle.split.3x1"
+        // "table.furniture" is available on macOS 13+ and resembles a desk.
+        let name = "table.furniture"
         return NSImage(systemSymbolName: name, accessibilityDescription: "Desk")
     }
 

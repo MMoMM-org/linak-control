@@ -87,7 +87,9 @@ public actor DeskManager {
         do {
             FileLog.debug("connect: BLE connect...", category: "core")
             try await bleController.connect(peripheralId: peripheralId)
-            FileLog.debug("connect: BLE connected, starting handshake...", category: "core")
+            FileLog.debug("connect: BLE connected, sending wake-up...", category: "core")
+            try? await bleController.write(data: DeskCommand.wakeUp, to: DeskUUID.command, type: .withoutResponse)
+            FileLog.debug("connect: starting handshake...", category: "core")
             let result = try await performHandshake(using: bleController)
             FileLog.debug("connect: handshake complete, applying result", category: "core")
             applyHandshakeResult(result, peripheralId: peripheralId)

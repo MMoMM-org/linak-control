@@ -48,6 +48,11 @@ private struct ConnectedContent: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            if let name = viewModel.deskName {
+                Text(name)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
             HeightHeroView(viewModel: viewModel)
             MovementControlView(viewModel: viewModel)
             PresetGridView(viewModel: viewModel)
