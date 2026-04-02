@@ -342,14 +342,15 @@ extension BLEController: CBPeripheralDelegate {
             discoveredCharacteristics[characteristic.uuid] = characteristic
         }
 
-        // Resolve connect when all expected services have reported their characteristics
+        // Resolve connect when all expected services have reported their characteristics.
+        // Guard on connectContinuation to avoid multiple resumes when services are cached.
         let allServices = peripheral.services ?? []
         let allDiscovered = allServices.allSatisfy { $0.characteristics != nil }
-        FileLog.debug("allServicesDiscovered=\(allDiscovered) (\(allServices.count) services)", category: "ble")
-        if allDiscovered {
-            FileLog.debug("connect continuation resolving -- all characteristics discovered", category: "ble")
-            connectContinuation?.resume()
+        FileLog.debug("allServicesDiscovered=\(allDiscovered) (\(allServices.count) services) hasContinuation=\(connectContinuation != nil)", category: "ble")
+        if allDiscovered, let continuation = connectContinuation {
             connectContinuation = nil
+            FileLog.debug("connect continuation resolving -- all characteristics discovered", category: "ble")
+            continuation.resume()
         }
     }
 

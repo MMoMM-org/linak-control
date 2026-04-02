@@ -116,25 +116,30 @@ final class HandshakeMaskValidationTests: XCTestCase {
 
 final class HandshakeDPGQueryOrderTests: XCTestCase {
 
-    func testEightDPGQueriesWrittenInSSDOrder() async throws {
+    func testNineDPGWritesInCorrectOrder() async throws {
         let mock = MockBLEController()
         configureMock(mock)
 
         _ = try await performHandshake(using: mock)
 
         let dpgWrites = mock.writtenData.filter { $0.characteristic == DeskUUID.dpg }
-        XCTAssertEqual(dpgWrites.count, 8)
-        XCTAssertEqual(dpgWrites[0].data, DeskCommand.getCapabilities)
-        XCTAssertEqual(dpgWrites[1].data, DeskCommand.getCapabilitiesExtended)
-        XCTAssertEqual(dpgWrites[2].data, DeskCommand.getUserID)
-        XCTAssertEqual(dpgWrites[3].data, DeskCommand.getDeskOffset)
-        XCTAssertEqual(dpgWrites[4].data, DeskCommand.readPreset(index: 1))
-        XCTAssertEqual(dpgWrites[5].data, DeskCommand.readPreset(index: 2))
-        XCTAssertEqual(dpgWrites[6].data, DeskCommand.readPreset(index: 3))
-        XCTAssertEqual(dpgWrites[7].data, DeskCommand.readPreset(index: 4))
+        // 2 writes for USER_ID init (read + write) + 7 DPG queries = 9 total
+        XCTAssertEqual(dpgWrites.count, 9)
+        // Step 3: activateDPGSession — USER_ID read then write
+        XCTAssertEqual(dpgWrites[0].data, DeskCommand.getUserID)
+        XCTAssertTrue(dpgWrites[1].data.starts(with: [0x7F, 0x81, 0x80]),
+            "Second DPG write must be SET_USER_ID (7F 81 80 ...)")
+        // Step 4: issueDPGQueries — 7 queries
+        XCTAssertEqual(dpgWrites[2].data, DeskCommand.getCapabilities)
+        XCTAssertEqual(dpgWrites[3].data, DeskCommand.getCapabilitiesExtended)
+        XCTAssertEqual(dpgWrites[4].data, DeskCommand.getDeskOffset)
+        XCTAssertEqual(dpgWrites[5].data, DeskCommand.readPreset(index: 1))
+        XCTAssertEqual(dpgWrites[6].data, DeskCommand.readPreset(index: 2))
+        XCTAssertEqual(dpgWrites[7].data, DeskCommand.readPreset(index: 3))
+        XCTAssertEqual(dpgWrites[8].data, DeskCommand.readPreset(index: 4))
     }
 
-    func testAllDPGQueriesWrittenWithResponse() async throws {
+    func testAllDPGWritesWrittenWithResponse() async throws {
         let mock = MockBLEController()
         configureMock(mock)
 
@@ -144,7 +149,7 @@ final class HandshakeDPGQueryOrderTests: XCTestCase {
         _ = try await performHandshake(using: mock)
 
         let dpgWrites = mock.writtenData.filter { $0.characteristic == DeskUUID.dpg }
-        XCTAssertEqual(dpgWrites.count, 8, "All 8 DPG queries must be written")
+        XCTAssertEqual(dpgWrites.count, 9, "2 USER_ID init + 7 DPG queries = 9 writes")
     }
 }
 
@@ -174,9 +179,9 @@ final class HandshakeNotificationEnableTests: XCTestCase {
         _ = try await performHandshake(using: mock)
 
         // All notify calls must appear before any DPG write in the recorded call sequence.
-        // We verify indirectly: notifyValueCalls has 3 entries and writtenData has 8 DPG entries.
+        // We verify indirectly: notifyValueCalls has 3 entries and writtenData has 9 DPG entries.
         XCTAssertEqual(mock.notifyValueCalls.count, 3)
-        XCTAssertEqual(mock.writtenData.filter { $0.characteristic == DeskUUID.dpg }.count, 8)
+        XCTAssertEqual(mock.writtenData.filter { $0.characteristic == DeskUUID.dpg }.count, 9)
     }
 }
 
@@ -211,6 +216,7 @@ final class HandshakeCapabilitiesParsingTests: XCTestCase {
 
 private func buildResponsesWith(capabilities: Data) -> [Data] {
     var responses = HandshakeFixtures.happyPathDPGResponses
-    responses[0] = capabilities
+    // Index 2 is the capabilities response (after USER_ID read + write ack at indices 0-1).
+    responses[2] = capabilities
     return responses
 }

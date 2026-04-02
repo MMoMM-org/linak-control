@@ -87,18 +87,32 @@ public enum DeskCommand {
     }
 
     // MARK: DPG characteristic commands (written to DeskUUID.dpg / 0x0011)
+    //
+    // DPG read format:  [0x7F, cmd, 0x00]       — third byte 0x00 signals "read"
+    // DPG write format: [0x7F, cmd, 0x80, ...]   — third byte 0x80 signals "write"
 
     /// Query general desk capabilities.
-    public static let getCapabilities = Data([0x7F, 0x80])
+    public static let getCapabilities = Data([0x7F, 0x80, 0x00])
 
     /// Query extended desk capabilities.
-    public static let getCapabilitiesExtended = Data([0x7F, 0x86])
+    public static let getCapabilitiesExtended = Data([0x7F, 0x86, 0x00])
 
     /// Query the active user ID stored in the desk.
-    public static let getUserID = Data([0x7F, 0x81])
+    public static let getUserID = Data([0x7F, 0x81, 0x00])
 
     /// Query the desk's programmed height offset.
-    public static let getDeskOffset = Data([0x7F, 0x88])
+    public static let getDeskOffset = Data([0x7F, 0x88, 0x00])
+
+    /// Write the user ID to activate the DPG session.
+    ///
+    /// The desk requires a USER_ID write before responding to any DPG queries.
+    /// The first byte of the user ID payload must be `0x01` for DPG1C desks.
+    /// - Parameter userData: The user ID bytes read from GET_USER_ID (modified if needed).
+    public static func setUserID(userData: Data) -> Data {
+        var payload = Data([0x7F, 0x81, 0x80])
+        payload.append(userData)
+        return payload
+    }
 
     // MARK: Preset commands
 
@@ -108,7 +122,7 @@ public enum DeskCommand {
     /// - Returns: Command bytes to write to ``DeskUUID/dpg``, or `nil` for an out-of-range index.
     public static func readPreset(index: Int) -> Data? {
         guard let slot = presetSlotByte(for: index) else { return nil }
-        return Data([0x7F, slot])
+        return Data([0x7F, slot, 0x00])
     }
 
     /// Save a height to a preset slot (1–4).

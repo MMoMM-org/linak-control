@@ -140,11 +140,22 @@ public final class DeskViewModel: ObservableObject {
     /// Connects to a specific desk discovered during scanning.
     ///
     /// Captures the desk's peripheral ID and name for use in `completeFirstRun()`.
-    /// Fire-and-forget; errors are swallowed — connection state updates via `stateStream`.
+    /// Guards against duplicate calls (e.g. double-click). Connection state updates
+    /// arrive via `stateStream`; errors are swallowed since the UI shows state changes.
+    private var connectTask: Task<Void, Never>?
+
     public func selectDesk(_ desk: DiscoveredDesk) {
+        // Ignore if already connecting/connected to this desk.
+        guard connectionState != .connecting && connectionState != .connected else {
+            FileLog.debug("selectDesk: ignored -- already \(connectionState)", category: "ui")
+            return
+        }
         selectedPeripheralId = desk.peripheralId
         selectedDeskName = desk.name
-        Task { try? await deskManager.connect(peripheralId: desk.peripheralId) }
+        scanTask?.cancel()
+        connectTask?.cancel()
+        FileLog.debug("selectDesk: connecting to '\(desk.name)'", category: "ui")
+        connectTask = Task { try? await deskManager.connect(peripheralId: desk.peripheralId) }
     }
 
     /// Finalises the first-run pairing flow.

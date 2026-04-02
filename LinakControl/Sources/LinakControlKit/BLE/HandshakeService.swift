@@ -1,5 +1,5 @@
 // HandshakeService.swift
-// LinakControlKit — DPG1C initialization sequence executed after BLE connection.
+// LinakControlKit -- DPG1C initialization sequence executed after BLE connection.
 
 import CoreBluetooth
 import Foundation
@@ -12,7 +12,7 @@ public struct HandshakeResult: Sendable {
     /// Capabilities decoded from the GET_CAPABILITIES (7F 80) response.
     public let capabilities: DeskCapabilities
 
-    /// Heights for preset slots 1–4 in mm. `nil` means the slot is unset.
+    /// Heights for preset slots 1-4 in mm. `nil` means the slot is unset.
     public let presetHeights: [Int?]
 
     /// The first height notification received during the handshake, if any.
@@ -32,10 +32,10 @@ private struct DPGQuery {
     let label: String
 }
 
+/// Post-init queries issued after the DPG session is activated.
 private let dpgQueries: [DPGQuery] = [
     DPGQuery(command: DeskCommand.getCapabilities,         label: "GET_CAPABILITIES"),
     DPGQuery(command: DeskCommand.getCapabilitiesExtended, label: "GET_CAPABILITIES_EXTENDED"),
-    DPGQuery(command: DeskCommand.getUserID,               label: "GET_USER_ID"),
     DPGQuery(command: DeskCommand.getDeskOffset,           label: "GET_DESK_OFFSET"),
     DPGQuery(command: DeskCommand.readPreset(index: 1)!,   label: "GET_MEMORY_POSITION_1"),
     DPGQuery(command: DeskCommand.readPreset(index: 2)!,   label: "GET_MEMORY_POSITION_2"),
@@ -50,8 +50,10 @@ private let dpgQueries: [DPGQuery] = [
 /// The sequence runs in this exact order:
 /// 1. Enable notifications on status (0003), dpg (0011), and height (0021).
 /// 2. Read and validate the output mask (0029).
-/// 3. Issue 8 DPG queries and collect notification responses (1 s timeout each).
-/// 4. Parse capabilities and preset heights from the collected responses.
+/// 3. Activate the DPG session by reading the USER_ID, ensuring byte 0 is 0x01,
+///    and writing it back. The desk rejects all queries without this step.
+/// 4. Issue DPG queries (capabilities, offset, presets) and collect responses.
+/// 5. Parse capabilities and preset heights from the collected responses.
 ///
 /// - Parameter bleController: The BLE controller connected to the desk.
 /// - Returns: A `HandshakeResult` with capabilities, preset heights, and optional current height.
@@ -78,12 +80,19 @@ public func performHandshake(using bleController: any BLEControllerProtocol) asy
         throw DeskError.unexpectedMaskValue(mask)
     }
 
-    // Step 3: Issue DPG queries and collect responses
-    FileLog.debug("handshake: step 3 -- issuing \(dpgQueries.count) DPG queries", category: "handshake")
-    let dpgResponses = try await issueDPGQueries(using: bleController)
-    FileLog.debug("handshake: step 3 -- got \(dpgResponses.count) responses", category: "handshake")
+    // Step 3: Activate DPG session via USER_ID read + write
+    FileLog.debug("handshake: step 3 -- activating DPG session (USER_ID init)", category: "handshake")
+    let dpgStream = bleController.notifications(for: DeskUUID.dpg)
+    let notificationBuffer = DPGNotificationBuffer(stream: dpgStream)
+    try await activateDPGSession(using: bleController, buffer: notificationBuffer)
+    FileLog.debug("handshake: step 3 -- DPG session activated", category: "handshake")
 
-    // Step 4: Parse results
+    // Step 4: Issue DPG queries and collect responses
+    FileLog.debug("handshake: step 4 -- issuing \(dpgQueries.count) DPG queries", category: "handshake")
+    let dpgResponses = try await issueDPGQueries(using: bleController, buffer: notificationBuffer)
+    FileLog.debug("handshake: step 4 -- got \(dpgResponses.count) responses", category: "handshake")
+
+    // Step 5: Parse results
     let capabilities = try parseCapabilitiesOrThrow(from: dpgResponses)
     let presetHeights = parsePresetHeights(from: dpgResponses)
     let currentHeight = await heightTask.value
@@ -114,19 +123,62 @@ private func firstHeightNotification(from bleController: any BLEControllerProtoc
     return nil
 }
 
+/// Reads the USER_ID from the desk, ensures byte 0 is 0x01, and writes it back
+/// to activate the DPG query session. Without this step the desk returns 0x0B
+/// error responses to all DPG queries.
+private func activateDPGSession(
+    using bleController: any BLEControllerProtocol,
+    buffer: DPGNotificationBuffer
+) async throws {
+    // Read current USER_ID
+    FileLog.debug("handshake: USER_ID read", category: "handshake")
+    try await bleController.write(data: DeskCommand.getUserID, to: DeskUUID.dpg, type: .withResponse)
+    let userIdResponse = try await buffer.next()
+    let hex = userIdResponse.map { String(format: "%02x", $0) }.joined(separator: " ")
+    FileLog.debug("handshake: USER_ID response = [\(hex)] (\(userIdResponse.count) bytes)", category: "handshake")
+
+    // Build the user data payload for the write-back.
+    // The response contains [status, ...userData]. Extract everything after byte 0.
+    // If the response is an error (0x0b) or empty, use a default payload.
+    var userData: Data
+    if userIdResponse.count > 1 && userIdResponse[0] != 0x0b {
+        userData = Data(userIdResponse[1...])
+    } else {
+        // Desk hasn't been initialized yet -- use a minimal default.
+        userData = Data([0x01])
+    }
+
+    // DPG1C requires byte 0 of user data to be 0x01.
+    if userData.isEmpty || userData[0] != 0x01 {
+        if userData.isEmpty {
+            userData = Data([0x01])
+        } else {
+            userData[0] = 0x01
+        }
+    }
+
+    // Write USER_ID back to activate the DPG session.
+    let setCommand = DeskCommand.setUserID(userData: userData)
+    let setHex = setCommand.map { String(format: "%02x", $0) }.joined(separator: " ")
+    FileLog.debug("handshake: USER_ID write = [\(setHex)]", category: "handshake")
+    try await bleController.write(data: setCommand, to: DeskUUID.dpg, type: .withResponse)
+    let writeResponse = try await buffer.next()
+    let writeHex = writeResponse.map { String(format: "%02x", $0) }.joined(separator: " ")
+    FileLog.debug("handshake: USER_ID write response = [\(writeHex)]", category: "handshake")
+}
+
 private func issueDPGQueries(
-    using bleController: any BLEControllerProtocol
+    using bleController: any BLEControllerProtocol,
+    buffer: DPGNotificationBuffer
 ) async throws -> [Data] {
-    // Obtain the notification stream once; consume one value per query.
-    let dpgStream = bleController.notifications(for: DeskUUID.dpg)
-    let notificationBuffer = DPGNotificationBuffer(stream: dpgStream)
     var responses: [Data] = []
 
     for (i, query) in dpgQueries.enumerated() {
         FileLog.debug("handshake: DPG query \(i+1)/\(dpgQueries.count) \(query.label)", category: "handshake")
         try await bleController.write(data: query.command, to: DeskUUID.dpg, type: .withResponse)
-        let response = try await notificationBuffer.next()
-        FileLog.debug("handshake: DPG response \(i+1) = \(response.count) bytes", category: "handshake")
+        let response = try await buffer.next()
+        let hex = response.map { String(format: "%02x", $0) }.joined(separator: " ")
+        FileLog.debug("handshake: DPG response \(i+1) = [\(hex)] (\(response.count) bytes)", category: "handshake")
         responses.append(response)
     }
 
@@ -177,6 +229,6 @@ private func parseCapabilitiesOrThrow(from responses: [Data]) throws -> DeskCapa
 }
 
 private func parsePresetHeights(from responses: [Data]) -> [Int?] {
-    // responses[4..7] are preset 1–4 responses (indices 4, 5, 6, 7)
-    return (4...7).map { parsePresetHeight(responses[$0]) }
+    // responses[3..6] are preset 1-4 responses (indices 3, 4, 5, 6)
+    return (3...6).map { parsePresetHeight(responses[$0]) }
 }

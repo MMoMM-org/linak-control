@@ -122,7 +122,7 @@ final class DeskManagerPresetSaveHappyPathTests: XCTestCase {
         let readPresetCommand = DeskCommand.readPreset(index: 2)!
         XCTAssertEqual(
             dpgWrites[1].data, readPresetCommand,
-            "Second DPG write must be the read-preset command [7F 8A]"
+            "Second DPG write must be the read-preset command [7F 8A 00]"
         )
     }
 

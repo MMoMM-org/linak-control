@@ -81,12 +81,23 @@ enum HandshakeFixtures {
     /// Height notification: 730 mm, speed = 0.
     static let heightNotification730mm = Data([0x84, 0x1C, 0x00, 0x00])
 
-    // MARK: Full DPG response sequence (happy path — 8 responses in query order)
+    // MARK: USER_ID write acknowledgement
+
+    /// Acknowledgement returned by the desk after a SET_USER_ID (7F 81 80 ...) write.
+    static let userIDWriteAck = Data([0x7F, 0x81, 0x01])
+
+    // MARK: Full DPG response sequence (happy path — 9 responses)
+    //
+    // The handshake first activates the DPG session via USER_ID read + write (2 responses),
+    // then issues 7 DPG queries (capabilities, capabilitiesExtended, deskOffset, presets 1-4).
 
     static let happyPathDPGResponses: [Data] = [
+        // activateDPGSession: USER_ID read response + write acknowledgement
+        userID,
+        userIDWriteAck,
+        // issueDPGQueries: 7 query responses
         capabilities4PresetsAutoUp,
         capabilitiesExtended,
-        userID,
         deskOffset,
         preset1Height730mm,
         preset2Height1105mm,

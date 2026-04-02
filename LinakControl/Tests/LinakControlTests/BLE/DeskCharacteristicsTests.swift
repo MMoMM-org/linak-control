@@ -86,19 +86,27 @@ final class DeskCharacteristicsTests: XCTestCase {
     }
 
     func testGetCapabilitiesBytes() {
-        XCTAssertEqual(DeskCommand.getCapabilities, Data([0x7F, 0x80]))
+        XCTAssertEqual(DeskCommand.getCapabilities, Data([0x7F, 0x80, 0x00]))
     }
 
     func testGetCapabilitiesExtendedBytes() {
-        XCTAssertEqual(DeskCommand.getCapabilitiesExtended, Data([0x7F, 0x86]))
+        XCTAssertEqual(DeskCommand.getCapabilitiesExtended, Data([0x7F, 0x86, 0x00]))
     }
 
     func testGetUserIDBytes() {
-        XCTAssertEqual(DeskCommand.getUserID, Data([0x7F, 0x81]))
+        XCTAssertEqual(DeskCommand.getUserID, Data([0x7F, 0x81, 0x00]))
     }
 
     func testGetDeskOffsetBytes() {
-        XCTAssertEqual(DeskCommand.getDeskOffset, Data([0x7F, 0x88]))
+        XCTAssertEqual(DeskCommand.getDeskOffset, Data([0x7F, 0x88, 0x00]))
+    }
+
+    // MARK: - setUserID encoding
+
+    func testSetUserIDBytes() {
+        let userData = Data([0x01, 0x00])
+        let result = DeskCommand.setUserID(userData: userData)
+        XCTAssertEqual(result, Data([0x7F, 0x81, 0x80, 0x01, 0x00]))
     }
 
     // MARK: - moveTo encoding
@@ -120,19 +128,19 @@ final class DeskCharacteristicsTests: XCTestCase {
     // MARK: - readPreset indices 1–4
 
     func testReadPreset1() {
-        XCTAssertEqual(DeskCommand.readPreset(index: 1), Data([0x7F, 0x89]))
+        XCTAssertEqual(DeskCommand.readPreset(index: 1), Data([0x7F, 0x89, 0x00]))
     }
 
     func testReadPreset2() {
-        XCTAssertEqual(DeskCommand.readPreset(index: 2), Data([0x7F, 0x8A]))
+        XCTAssertEqual(DeskCommand.readPreset(index: 2), Data([0x7F, 0x8A, 0x00]))
     }
 
     func testReadPreset3() {
-        XCTAssertEqual(DeskCommand.readPreset(index: 3), Data([0x7F, 0x8B]))
+        XCTAssertEqual(DeskCommand.readPreset(index: 3), Data([0x7F, 0x8B, 0x00]))
     }
 
     func testReadPreset4() {
-        XCTAssertEqual(DeskCommand.readPreset(index: 4), Data([0x7F, 0x8C]))
+        XCTAssertEqual(DeskCommand.readPreset(index: 4), Data([0x7F, 0x8C, 0x00]))
     }
 
     func testReadPresetOutOfRangeReturnsNil() {

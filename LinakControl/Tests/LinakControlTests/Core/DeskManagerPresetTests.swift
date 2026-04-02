@@ -289,7 +289,8 @@ final class DeskManagerPresetSafetyTests: XCTestCase {
         // 500mm = 5000 tenths = 0x1388 → lo=0x88, hi=0x13
         let preset1At500mm = Data([0x7F, 0x89, 0x88, 0x13])
         var dpgResponses = HandshakeFixtures.happyPathDPGResponses
-        dpgResponses[4] = preset1At500mm
+        // Index 5 = preset 1 (after USER_ID read/write ack + caps + capsExt + offset)
+        dpgResponses[5] = preset1At500mm
 
         mock.mockNotificationStreams[DeskUUID.dpg] = AsyncStream { cont in
             for r in dpgResponses { cont.yield(r) }
@@ -324,7 +325,8 @@ final class DeskManagerPresetSafetyTests: XCTestCase {
         // 1400mm = 14000 tenths = 0x36B0 → lo=0xB0, hi=0x36
         let preset1At1400mm = Data([0x7F, 0x89, 0xB0, 0x36])
         var dpgResponses = HandshakeFixtures.happyPathDPGResponses
-        dpgResponses[4] = preset1At1400mm
+        // Index 5 = preset 1 (after USER_ID read/write ack + caps + capsExt + offset)
+        dpgResponses[5] = preset1At1400mm
 
         mock.mockNotificationStreams[DeskUUID.dpg] = AsyncStream { cont in
             for r in dpgResponses { cont.yield(r) }
