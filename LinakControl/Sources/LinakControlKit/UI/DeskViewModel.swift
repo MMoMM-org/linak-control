@@ -126,7 +126,13 @@ public final class DeskViewModel: ObservableObject {
             let stream = await manager.scan()
             for await desk in stream {
                 guard !Task.isCancelled else { break }
-                await MainActor.run { self?.discoveredDesks.append(desk) }
+                await MainActor.run {
+                    guard let self else { return }
+                    // Deduplicate by peripheral ID — BLE may report the same desk multiple times.
+                    if !self.discoveredDesks.contains(where: { $0.peripheralId == desk.peripheralId }) {
+                        self.discoveredDesks.append(desk)
+                    }
+                }
             }
         }
     }

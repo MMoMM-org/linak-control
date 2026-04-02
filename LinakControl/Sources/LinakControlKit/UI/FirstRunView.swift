@@ -53,13 +53,20 @@ struct FirstRunWelcomeView: View {
                 Text("LinakControl")
                     .font(.title2.weight(.semibold))
 
-                Text("Control your LINAK desk from the menu bar.\nWe'll scan for your desk and pair it now.")
+                Text("Control your LINAK desk from the menu bar.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
             }
 
-            Button("Get Started") {
+            VStack(spacing: 4) {
+                Text("Before scanning, activate Bluetooth pairing on your desk controller until the pairing indicator turns blue.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button("Scan for Desk") {
                 viewModel.startScan()
             }
             .buttonStyle(.borderedProminent)

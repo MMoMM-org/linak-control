@@ -21,6 +21,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotkeyManager: HotkeyManager!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        FileLog.reset()
+        FileLog.debug("=== LinakControl launch ===", category: "app")
+
         let bleController = BLEController()
         let configStore = ConfigStore()
         deskManager = DeskManager(bleController: bleController, configStore: configStore)
@@ -31,7 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let loginItemManager = LoginItemManager()
         viewModel = DeskViewModel(deskManager: deskManager, configStore: configStore, loginItemManager: loginItemManager)
         menuBarController = MenuBarController(viewModel: viewModel)
-        menuBarController.setup()
+        menuBarController.setup(autoOpen: viewModel.isFirstRun)
 
         let notificationService = NotificationService()
         notificationService.requestPermission()

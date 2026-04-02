@@ -34,18 +34,32 @@ public final class MenuBarController: NSObject {
     // MARK: - Public API
 
     /// Creates both NSStatusItems and connects them to the view model.
-    public func setup() {
+    ///
+    /// When `autoOpen` is true the popover opens immediately after setup,
+    /// which is useful for first-run pairing so the user sees the scanning UI
+    /// without having to find and click the (dimmed) menu-bar icon first.
+    public func setup(autoOpen: Bool = false) {
+        FileLog.debug("setup(autoOpen: \(autoOpen)) isFirstRun=\(viewModel.isFirstRun)", category: "ui")
         setupZone1()
         setupZone2()
         startObservingViewModel()
+
+        if autoOpen {
+            // Slight delay so the status item is laid out in the menu bar first.
+            DispatchQueue.main.async { [weak self] in
+                self?.togglePopover()
+            }
+        }
     }
 
     // MARK: - Zone 1: desk icon → popover
 
     private func setupZone1() {
+        FileLog.debug("setupZone1: creating square-length status item", category: "ui")
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = zone1Image(for: viewModel.connectionState)
         item.button?.image?.isTemplate = true
+        item.button?.alphaValue = viewModel.connectionState == .connected ? 1.0 : 0.7
         item.button?.action = #selector(togglePopover)
         item.button?.target = self
         zone1StatusItem = item
@@ -55,7 +69,9 @@ public final class MenuBarController: NSObject {
             rootView: PopoverView(viewModel: viewModel)
         )
         hosting.contentSize = NSSize(width: 280, height: 400)
-        hosting.behavior = .transient
+        // During first-run the popover must stay open so the user can complete
+        // the pairing flow without it dismissing on focus loss.
+        hosting.behavior = viewModel.isFirstRun ? .applicationDefined : .transient
         popover = hosting
     }
 
@@ -71,6 +87,7 @@ public final class MenuBarController: NSObject {
     // MARK: - Zone 2: preset text → dropdown menu
 
     private func setupZone2() {
+        FileLog.debug("setupZone2: creating variable-length status item", category: "ui")
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.title = zone2Title()
         item.button?.action = #selector(showPresetMenu)
@@ -100,15 +117,24 @@ public final class MenuBarController: NSObject {
     private func refreshZones() {
         updateZone1Icon()
         updateZone2Title()
+        updatePopoverBehavior()
     }
 
     private func updateZone1Icon() {
         zone1StatusItem?.button?.image = zone1Image(for: viewModel.connectionState)
-        zone1StatusItem?.button?.alphaValue = viewModel.connectionState == .disconnected ? 0.4 : 1.0
+        zone1StatusItem?.button?.alphaValue = viewModel.connectionState == .connected ? 1.0 : 0.7
     }
 
     private func updateZone2Title() {
         zone2StatusItem?.button?.title = zone2Title()
+    }
+
+    private func updatePopoverBehavior() {
+        // Switch from applicationDefined → transient once first-run completes
+        // so the popover dismisses normally on focus loss.
+        if !viewModel.isFirstRun, popover?.behavior == .applicationDefined {
+            popover?.behavior = .transient
+        }
     }
 
     // MARK: - Helpers
@@ -119,12 +145,22 @@ public final class MenuBarController: NSObject {
     }
 
     private func zone2Title() -> String {
-        guard viewModel.connectionState == .connected else { return "—" }
-        let heightText = viewModel.heightDisplay
-        if let active = viewModel.activePreset {
-            return "\(active)  \(heightText)"
+        switch viewModel.connectionState {
+        case .connected:
+            let heightText = viewModel.heightDisplay
+            if let active = viewModel.activePreset {
+                return "\(active)  \(heightText)"
+            }
+            return heightText
+        case .connecting:
+            return "Connecting…"
+        case .scanning:
+            return "Scanning…"
+        case .disconnected:
+            return "Not Connected"
+        case .busy:
+            return "Desk Busy"
         }
-        return heightText
     }
 
     private func buildPresetMenu() -> NSMenu {
