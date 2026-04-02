@@ -229,11 +229,13 @@ public final class DeskViewModel: ObservableObject {
         persistConfig { $0.unit = newUnit }
     }
 
-    /// Updates the desk base offset and recalculates all displayed heights.
+    /// Updates the desk base offset and recalculates all displayed heights and presets.
     public func updateDeskOffset(_ mm: Int) {
         deskOffsetMM = mm
-        heightDisplay = heightMM.map { HeightConverter.display(mm: $0 + mm, unit: unit) } ?? "—"
         persistConfig { $0.deskOffsetMM = mm }
+        // Re-apply the full state snapshot with the new offset.
+        let manager = deskManager
+        Task { apply(await manager.currentState) }
     }
 
     /// Updates the up-movement run mode and persists to config.

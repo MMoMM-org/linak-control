@@ -103,6 +103,27 @@ public struct AppConfig: Codable, Equatable {
         case preset4Label     = "preset_4_label"
     }
 
+    // MARK: Decodable — tolerant of missing keys
+
+    /// Custom decoder that provides defaults for any missing keys.
+    /// Without this, adding a new field breaks decoding of old config files
+    /// and all persisted settings are lost.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        pairedDeskUUID = try c.decodeIfPresent(String.self, forKey: .pairedDeskUUID)
+        pairedDeskName = try c.decodeIfPresent(String.self, forKey: .pairedDeskName)
+        unit           = try c.decodeIfPresent(HeightUnit.self, forKey: .unit) ?? .cm
+        deskOffsetMM   = try c.decodeIfPresent(Int.self, forKey: .deskOffsetMM) ?? 0
+        autoRunUp      = try c.decodeIfPresent(RunMode.self, forKey: .autoRunUp) ?? .manual
+        autoRunDown    = try c.decodeIfPresent(RunMode.self, forKey: .autoRunDown) ?? .manual
+        startAtLogin   = try c.decodeIfPresent(Bool.self, forKey: .startAtLogin) ?? false
+        hotkeysEnabled = try c.decodeIfPresent(Bool.self, forKey: .hotkeysEnabled) ?? false
+        preset1Label   = try c.decodeIfPresent(String.self, forKey: .preset1Label)
+        preset2Label   = try c.decodeIfPresent(String.self, forKey: .preset2Label)
+        preset3Label   = try c.decodeIfPresent(String.self, forKey: .preset3Label)
+        preset4Label   = try c.decodeIfPresent(String.self, forKey: .preset4Label)
+    }
+
     // MARK: Defaults
 
     /// Factory default — matches SDD initial values.

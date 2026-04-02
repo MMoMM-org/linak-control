@@ -60,7 +60,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             if let uuid = config?.pairedDeskUUID, let peripheralId = UUID(uuidString: uuid) {
-                try? await deskManager.connect(peripheralId: peripheralId)
+                // Retry connect up to 3 times with increasing delay.
+                // The desk may need time to wake from sleep after app launch.
+                for attempt in 1...3 {
+                    do {
+                        try await deskManager.connect(peripheralId: peripheralId)
+                        break
+                    } catch {
+                        FileLog.debug("auto-connect attempt \(attempt)/3 failed: \(error)", category: "app")
+                        if attempt < 3 {
+                            try? await Task.sleep(for: .seconds(Double(attempt) * 2))
+                        }
+                    }
+                }
             }
         }
     }
