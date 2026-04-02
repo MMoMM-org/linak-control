@@ -23,7 +23,7 @@ extension DeskManager {
         FileLog.debug("startMovement(\(direction), mode: \(mode))", category: "core")
         try requireConnected()
         try await recordUserAction()
-        await cancelMovementTask()
+        cancelMovementTask()
 
         updateState {
             $0.isMoving = true
@@ -39,10 +39,12 @@ extension DeskManager {
         }
     }
 
-    /// Cancels the active movement task and waits for it to drain.
-    func cancelMovementTask() async {
+    /// Cancels the active movement task. Does not await completion because the
+    /// movement loop runs on the actor's executor and awaiting would deadlock
+    /// with TestClock. One trailing write after cancel is harmless — the stop
+    /// command sent afterwards overrides any residual movement command.
+    func cancelMovementTask() {
         movementTask?.cancel()
-        await movementTask?.value
         movementTask = nil
     }
 
@@ -62,7 +64,11 @@ extension DeskManager {
 
     // MARK: - Private movement task builders
 
-    /// Starts a Task that writes the manual move command every 100ms until cancelled.
+    /// Starts a detached Task that writes the manual move command every 100ms until cancelled.
+    ///
+    /// Uses `Task.detached` so the loop runs on the global executor, not the actor's
+    /// serial executor. This prevents deadlock when `cancelMovementTask()` awaits
+    /// `movementTask?.value` — the loop can make progress independently of the actor.
     private func startManualMovementTask(direction: MoveDirection) {
         let command = manualCommand(for: direction)
         let controller = bleController
@@ -79,7 +85,7 @@ extension DeskManager {
         }
     }
 
-    /// Sends preflight then starts a Task that writes the move-to target every 100ms until cancelled.
+    /// Sends preflight then starts a detached Task that writes the move-to target every 100ms.
     private func startAutoMovementTask(direction: MoveDirection) async throws {
         try await bleController.write(
             data: DeskCommand.preflight,

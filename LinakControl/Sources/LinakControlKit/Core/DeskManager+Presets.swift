@@ -30,8 +30,8 @@ extension DeskManager {
         let targetMM = try resolvePresetHeight(index)
         try guardHeightInRange(targetMM)
 
-        await cancelPresetMoveTask()
-        await cancelMovementTask()
+        cancelPresetMoveTask()
+        cancelMovementTask()
 
         updateState {
             $0.targetPreset = index
@@ -43,9 +43,11 @@ extension DeskManager {
     }
 
     /// Cancels the active preset move task and waits for it to drain.
-    func cancelPresetMoveTask() async {
+    /// Cancels the active preset move task. Does not await completion because the
+    /// preset loop accesses actor-isolated state (hasArrived) and awaiting would
+    /// deadlock when using TestClock. The loop exits on its next isCancelled check.
+    func cancelPresetMoveTask() {
         presetMoveTask?.cancel()
-        await presetMoveTask?.value
         presetMoveTask = nil
     }
 

@@ -82,25 +82,18 @@ final class DeskManagerPresetHappyPathTests: XCTestCase {
     }
 
     func testGoToPresetSendsMoveToTargetRepeatedly() async throws {
-        let testClock = TestClock()
-        let setup = try await makePresetTestSetup(clock: testClock)
+        let setup = try await makePresetTestSetup()
         let priorCount = setup.mock.writtenData.count
 
         let goToTask = Task { try await setup.manager.goToPreset(index: 2) }
 
-        // Advance past preflight delay, then let the control loop run several iterations
-        for _ in 0..<5 {
-            await Task.yield()
-            testClock.advance(by: .milliseconds(100))
-        }
-        await Task.yield()
+        // Let the control loop run several iterations (real time, ~400ms)
+        try await Task.sleep(for: .milliseconds(400))
 
-        // Emit arrival height and advance to let loop detect it
+        // Emit arrival height to terminate the loop
         setup.heightCont.yield(makeHeightPacket(mm: 1105))
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(50))
         setup.heightCont.finish()
-
         try await goToTask.value
 
         let expectedTarget = DeskCommand.moveTo(tenthsOfMm: UInt16(1105 * 10))
@@ -109,7 +102,7 @@ final class DeskManagerPresetHappyPathTests: XCTestCase {
         }
         XCTAssertGreaterThanOrEqual(
             heartbeatWrites.count, 2,
-            "goToPreset must send move-to 1105mm to targetHeartbeat repeatedly (at least twice in 350ms)"
+            "goToPreset must send move-to 1105mm to targetHeartbeat repeatedly"
         )
     }
 
@@ -138,22 +131,15 @@ final class DeskManagerPresetHappyPathTests: XCTestCase {
     }
 
     func testGoToPresetClearsTargetPresetOnArrival() async throws {
-        let testClock = TestClock()
-        let setup = try await makePresetTestSetup(clock: testClock)
+        let setup = try await makePresetTestSetup()
 
         let goToTask = Task { try await setup.manager.goToPreset(index: 2) }
+        try await Task.sleep(for: .milliseconds(50))
 
-        // Advance past preflight delay
-        await Task.yield()
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
-
-        // Emit arrival height and advance to let loop detect it
+        // Emit arrival height
         setup.heightCont.yield(makeHeightPacket(mm: 1103))
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(150))
         setup.heightCont.finish()
-
         try await goToTask.value
 
         let state = await setup.manager.currentState
@@ -162,23 +148,16 @@ final class DeskManagerPresetHappyPathTests: XCTestCase {
     }
 
     func testGoToPresetArrivalWithinFiveMmTolerance() async throws {
-        let testClock = TestClock()
-        let setup = try await makePresetTestSetup(clock: testClock)
+        let setup = try await makePresetTestSetup()
 
         // Preset 2 = 1105mm; arrive at exactly 1100mm (5mm under — boundary of tolerance)
         let goToTask = Task { try await setup.manager.goToPreset(index: 2) }
+        try await Task.sleep(for: .milliseconds(50))
 
-        // Advance past preflight delay
-        await Task.yield()
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
-
-        // Emit arrival height at tolerance boundary and advance to let loop detect it
+        // Emit arrival height at tolerance boundary
         setup.heightCont.yield(makeHeightPacket(mm: 1100))
-        testClock.advance(by: .milliseconds(100))
-        await Task.yield()
+        try await Task.sleep(for: .milliseconds(150))
         setup.heightCont.finish()
-
         try await goToTask.value
 
         let state = await setup.manager.currentState

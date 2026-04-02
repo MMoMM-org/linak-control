@@ -72,15 +72,17 @@ final class DeskManagerPresetSaveHappyPathTests: XCTestCase {
             saveResponses: [saveConfirmation, readResponse]
         )
 
+        let priorCount = mock.writtenData.count
         try await manager.savePreset(index: 2)
 
-        let dpgWrites = mock.writtenData.filter { $0.characteristic == DeskUUID.dpg }
-        guard dpgWrites.count >= 1 else {
+        let postSaveWrites = Array(mock.writtenData.dropFirst(priorCount))
+            .filter { $0.characteristic == DeskUUID.dpg }
+        guard postSaveWrites.count >= 1 else {
             XCTFail("Expected at least one DPG write for the save command")
             return
         }
 
-        let saveCommandBytes = dpgWrites[0].data
+        let saveCommandBytes = postSaveWrites[0].data
         let expectedSaveCommand = Data([0x7F, 0x8A, 0x80, 0x01, 0x2A, 0x2B])
         XCTAssertEqual(
             saveCommandBytes, expectedSaveCommand,
@@ -282,14 +284,16 @@ final class DeskManagerPresetSaveCommandBytesTests: XCTestCase {
             saveResponses: [saveConfirmation, readResponse]
         )
 
+        let priorCount = mock.writtenData.count
         try await manager.savePreset(index: 3)
 
-        let dpgWrites = mock.writtenData.filter { $0.characteristic == DeskUUID.dpg }
-        XCTAssertGreaterThanOrEqual(dpgWrites.count, 1)
+        let postSaveWrites = Array(mock.writtenData.dropFirst(priorCount))
+            .filter { $0.characteristic == DeskUUID.dpg }
+        XCTAssertGreaterThanOrEqual(postSaveWrites.count, 1)
 
         let expectedSaveCommand = Data([0x7F, 0x8B, 0x80, 0x01, 0x28, 0x23])
         XCTAssertEqual(
-            dpgWrites[0].data, expectedSaveCommand,
+            postSaveWrites[0].data, expectedSaveCommand,
             "Save command for preset 3 at 900mm must be [7F 8B 80 01 28 23]"
         )
     }
@@ -303,8 +307,9 @@ final class DeskManagerPresetSaveRereadTests: XCTestCase {
         // Handshake populated preset 3 with 900mm; now save at 1105mm and confirm 1105mm
         let heightMM = 1105
         let raw = UInt16(heightMM * 10)
-        let confirmedResponse = Data([0x7F, 0x8B, UInt8(raw & 0xFF), UInt8(raw >> 8)])
-        let saveConfirmation = Data([0x7F, 0x8B, 0x00, 0x00])
+        // DPG format: [status, length, slot, height_lo, height_hi, ...]
+        let confirmedResponse = Data([0x01, 0x07, 0x03, UInt8(raw & 0xFF), UInt8(raw >> 8), 0x00, 0x00, 0x00, 0x00])
+        let saveConfirmation = Data([0x01, 0x00])
         let (manager, _) = try await makeConnectedManagerForSave(
             heightMM: heightMM,
             saveResponses: [saveConfirmation, confirmedResponse]

@@ -142,8 +142,8 @@ public actor DeskManager {
     /// - Throws: `DeskError.notConnected` if not currently connected.
     public func stop() async throws {
         try requireConnected()
-        await cancelMovementTask()
-        await cancelPresetMoveTask()
+        cancelMovementTask()
+        cancelPresetMoveTask()
         try await writeStopCommand()
         updateState {
             $0.isMoving = false
