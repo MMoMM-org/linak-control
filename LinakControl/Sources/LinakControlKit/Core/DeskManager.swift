@@ -244,12 +244,18 @@ extension DeskManager {
     }
 
     /// Processes a single height notification packet.
+    ///
+    /// Speed values close to zero (abs < 5) are treated as stationary to avoid
+    /// stale movement flags from deceleration notifications after a stop command.
+    private static let speedThreshold = 5
+
     private func handleHeightNotification(_ data: Data) {
         guard let (heightMM, speedMMS) = parseHeightNotification(data) else { return }
         state.heightMM = heightMM
         state.speedMMS = speedMMS
-        state.isMoving = speedMMS != 0
-        state.moveDirection = moveDirection(for: speedMMS)
+        let isActuallyMoving = abs(speedMMS) >= Self.speedThreshold
+        state.isMoving = isActuallyMoving
+        state.moveDirection = isActuallyMoving ? moveDirection(for: speedMMS) : nil
         state.activePreset = activePreset(
             height: heightMM,
             presets: state.presets,

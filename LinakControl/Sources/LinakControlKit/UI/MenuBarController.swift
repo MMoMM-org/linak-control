@@ -81,6 +81,9 @@ public final class MenuBarController: NSObject {
             popover.performClose(nil)
         } else {
             popover?.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            // Make the popover's window key so clicks register immediately
+            // without needing an extra activation click first.
+            popover?.contentViewController?.view.window?.makeKey()
         }
     }
 
