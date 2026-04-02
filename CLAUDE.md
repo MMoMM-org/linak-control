@@ -1,5 +1,7 @@
 # linak-control
 
+@~/Kouzou/standards/general.md
+
 ## Core Philosophy
 macOS menu bar app + CLI for controlling LINAK DPG1C standing desks via BLE. Personal use, no App Store distribution. Built with Swift/CoreBluetooth.
 
