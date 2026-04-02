@@ -41,6 +41,18 @@
 
 **Rationale**: The `AsyncStream.AsyncIterator` is not Sendable. The old class used `@unchecked Sendable` to suppress compiler warnings but had a latent data race. An actor makes iterator access safe by construction.
 
+## 2026-04-02 -- Cancel movement tasks without await
+
+**Decision**: `cancelMovementTask()` and `cancelPresetMoveTask()` call `.cancel()` but do NOT `await task.value`.
+
+**Rationale**: Actor-isolated Tasks sleeping on TestClock deadlock when the cancel-caller also holds the actor. One trailing BLE write after cancel is harmless — stop commands override movement. Researched via web: "Swift actor reentrancy deadlock await task value". `Task.detached` was tried but doesn't synchronize with TestClock from tests.
+
+## 2026-04-02 -- Base offset from USER_ID, not DESK_OFFSET
+
+**Decision**: Parse the desk base height offset from the USER_ID (0x81) response bytes [3:4], not from GET_DESK_OFFSET (0x88).
+
+**Rationale**: The DESK_OFFSET response has an 11-byte complex payload. Reading bytes [2:3] gave 1413mm (wrong). The USER_ID response `[01 03 01 CE 19]` has the offset at payload bytes [1:2] = 0x19CE = 660mm, matching real desk measurements. Confirmed by rhyst/linak-controller which uses CMD 0x81 for `base_height`.
+
 ## 2026-04-02 -- Atomic continuation extraction (take* helpers)
 
 **Decision**: All `CheckedContinuation` access in `BLEController` goes through `take*()` helpers that atomically nil-and-return.

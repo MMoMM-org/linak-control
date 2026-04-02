@@ -3,6 +3,10 @@
 
 ## LINAK DPG1C Protocol
 
+<!-- 2026-04-02 -->
+- Base offset: USER_ID (0x81) response bytes [3:4] LE uint16 / 10 = mm. NOT from DESK_OFFSET (0x88).
+- Example: response [01 03 01 CE 19] → payload [01 CE 19] → bytes[1:2] = 0x19CE = 6606 → 660.6mm
+
 - **Height values**: uint16 in 0.1mm units (LE). Raw = relative to desk's lowest position.
 - **Display height**: raw + user-configured desk offset (stored in config as `desk_offset_mm`)
 - **Preset heights**: stored in DPG as raw values. Response format: [status, length, slot, height_lo, height_hi, ...]

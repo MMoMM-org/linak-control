@@ -22,5 +22,11 @@ Adding new fields (deskOffsetMM) to AppConfig broke the auto-synthesized Codable
 ## SPM lock files block tests -- Status: known
 Background agent processes can leave orphan swift-package processes holding `.build/*.lock`. Fix: `killall swift-package; make test` or `rm -f LinakControl/.build/*.lock`.
 
+## TestClock + actor-isolated Task deadlock -- Status: resolved
+TestClock + actor-isolated Task + `await task.value` deadlocks: the actor awaits the task that needs the actor to check `isCancelled`. `Task.detached` doesn't help because TestClock.advance doesn't synchronize with the global executor. Fix: cancel without await (fire-and-forget), use SystemClock with real timing in tests, use `waitFor()` polling for state checks.
+
+## Base offset parsed from wrong response -- Status: resolved
+GET_DESK_OFFSET (0x88) has an 11-byte payload that was incorrectly read as uint16, yielding 1413mm. The real base offset is in the USER_ID (0x81) response at bytes [3:4] as LE uint16 in 0.1mm (e.g. 0x1A90 = 680mm). Fix: `DeskProtocol.parseBaseOffset(fromUserID:)`.
+
 ## Desk offset resets to handshake value -- Status: resolved
 persistPairingInfo and apply() both overwrote the user's manual offset with the handshake-parsed value (1413mm, incorrectly interpreted). Fix: offset exclusively from config, never from handshake state.
