@@ -180,22 +180,24 @@ private func activateDPGSession(
     }
 
     // DPG1C requires byte 0 of user data to be 0x01.
-    if userData.isEmpty || userData[0] != 0x01 {
+    // Only write back if modification is needed — avoids sending corrupted
+    // data back to the desk and getting 0x0B rejection errors.
+    if !userData.isEmpty && userData[0] == 0x01 {
+        FileLog.debug("handshake: USER_ID byte 0 already 0x01, skipping write-back", category: "handshake")
+    } else {
         if userData.isEmpty {
             userData = Data([0x01])
         } else {
             userData[0] = 0x01
         }
+        let setCommand = DeskCommand.setUserID(userData: userData)
+        let setHex = setCommand.map { String(format: "%02x", $0) }.joined(separator: " ")
+        FileLog.debug("handshake: USER_ID write = [\(setHex)]", category: "handshake")
+        try await bleController.write(data: setCommand, to: DeskUUID.dpg, type: .withResponse)
+        let writeResponse = try await buffer.next()
+        let writeHex = writeResponse.map { String(format: "%02x", $0) }.joined(separator: " ")
+        FileLog.debug("handshake: USER_ID write response = [\(writeHex)]", category: "handshake")
     }
-
-    // Write USER_ID back to activate the DPG session.
-    let setCommand = DeskCommand.setUserID(userData: userData)
-    let setHex = setCommand.map { String(format: "%02x", $0) }.joined(separator: " ")
-    FileLog.debug("handshake: USER_ID write = [\(setHex)]", category: "handshake")
-    try await bleController.write(data: setCommand, to: DeskUUID.dpg, type: .withResponse)
-    let writeResponse = try await buffer.next()
-    let writeHex = writeResponse.map { String(format: "%02x", $0) }.joined(separator: " ")
-    FileLog.debug("handshake: USER_ID write response = [\(writeHex)]", category: "handshake")
 }
 
 private func issueDPGQueries(

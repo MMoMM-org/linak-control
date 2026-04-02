@@ -24,6 +24,9 @@ extension DeskManager {
         try requireConnected()
         await cancelMovementTask()
 
+        // Wake the desk before sending movement commands.
+        try? await bleController.write(data: DeskCommand.wakeUp, to: DeskUUID.command, type: .withoutResponse)
+
         updateState {
             $0.isMoving = true
             $0.moveDirection = direction

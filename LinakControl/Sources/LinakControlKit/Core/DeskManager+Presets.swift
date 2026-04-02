@@ -32,6 +32,9 @@ extension DeskManager {
         cancelPresetMoveTask()
         await cancelMovementTask()
 
+        // Wake the desk before sending preset commands.
+        try? await bleController.write(data: DeskCommand.wakeUp, to: DeskUUID.command, type: .withoutResponse)
+
         updateState {
             $0.targetPreset = index
             $0.isMoving = true

@@ -113,12 +113,11 @@ final class UIBLEPresetSwitchTests: XCTestCase {
 
         let newWrites = Array(harness.mock.writtenData.dropFirst(priorWriteCount))
 
-        // Preflight (0x00 0x00) must be the first write after the preset is triggered.
-        XCTAssertEqual(
-            newWrites.first?.data, DeskCommand.preflight,
-            "First write after goToPreset must be the preflight command"
-        )
-        XCTAssertEqual(newWrites.first?.characteristic, DeskUUID.command)
+        // Wake-up then preflight must be the first two command writes.
+        let cmdWrites = newWrites.filter { $0.characteristic == DeskUUID.command }
+        XCTAssertGreaterThanOrEqual(cmdWrites.count, 2, "Need wake-up + preflight")
+        XCTAssertEqual(cmdWrites[0].data, DeskCommand.wakeUp, "First must be wake-up")
+        XCTAssertEqual(cmdWrites[1].data, DeskCommand.preflight, "Second must be preflight")
 
         // At least one heartbeat targeting 1105mm must have been sent.
         let expectedTarget = DeskCommand.moveTo(tenthsOfMm: UInt16(1105 * 10))

@@ -196,7 +196,7 @@ final class DeskManagerStopTests: XCTestCase {
 
 final class DeskManagerAutoUpTests: XCTestCase {
 
-    func testAutoUpSendsPreflightBeforeMoving() async throws {
+    func testAutoUpSendsWakeUpThenPreflightBeforeMoving() async throws {
         let (manager, mock) = try await makeConnectedManager()
         let priorCount = mock.writtenData.count
 
@@ -204,13 +204,11 @@ final class DeskManagerAutoUpTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(50))
         try await manager.stop()
 
-        let postHandshakeWrites = Array(mock.writtenData.dropFirst(priorCount))
-        let firstWrite = postHandshakeWrites.first
-        XCTAssertEqual(
-            firstWrite?.data, DeskCommand.preflight,
-            "Auto mode must send preflight (0x00 0x00) before move-to commands"
-        )
-        XCTAssertEqual(firstWrite?.characteristic, DeskUUID.command)
+        let postWrites = Array(mock.writtenData.dropFirst(priorCount))
+            .filter { $0.characteristic == DeskUUID.command }
+        XCTAssertGreaterThanOrEqual(postWrites.count, 2, "Need at least wake-up + preflight")
+        XCTAssertEqual(postWrites[0].data, DeskCommand.wakeUp, "First command must be wake-up")
+        XCTAssertEqual(postWrites[1].data, DeskCommand.preflight, "Second command must be preflight")
     }
 
     func testAutoUpSendsMoveToMaxHeightRepeatedly() async throws {
@@ -233,7 +231,7 @@ final class DeskManagerAutoUpTests: XCTestCase {
 
 final class DeskManagerAutoDownTests: XCTestCase {
 
-    func testAutoDownSendsPreflightBeforeMoving() async throws {
+    func testAutoDownSendsWakeUpThenPreflightBeforeMoving() async throws {
         let (manager, mock) = try await makeConnectedManager()
         let priorCount = mock.writtenData.count
 
@@ -241,10 +239,11 @@ final class DeskManagerAutoDownTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(50))
         try await manager.stop()
 
-        let postHandshakeWrites = Array(mock.writtenData.dropFirst(priorCount))
-        let firstWrite = postHandshakeWrites.first
-        XCTAssertEqual(firstWrite?.data, DeskCommand.preflight)
-        XCTAssertEqual(firstWrite?.characteristic, DeskUUID.command)
+        let postWrites = Array(mock.writtenData.dropFirst(priorCount))
+            .filter { $0.characteristic == DeskUUID.command }
+        XCTAssertGreaterThanOrEqual(postWrites.count, 2, "Need at least wake-up + preflight")
+        XCTAssertEqual(postWrites[0].data, DeskCommand.wakeUp, "First command must be wake-up")
+        XCTAssertEqual(postWrites[1].data, DeskCommand.preflight, "Second command must be preflight")
     }
 
     func testAutoDownSendsMoveToMinHeightRepeatedly() async throws {
