@@ -26,6 +26,7 @@ public final class DeskViewModel: ObservableObject {
     @Published public var activePreset: Int?
     @Published public var targetPreset: Int?
     @Published public var unit: HeightUnit = .cm
+    @Published public var deskOffsetMM: Int = 0
     @Published public var autoRunUp: RunMode = .manual
     @Published public var autoRunDown: RunMode = .manual
 
@@ -80,6 +81,7 @@ public final class DeskViewModel: ObservableObject {
         let config = (try? configStore.load()) ?? .default
         isFirstRun = config.pairedDeskUUID == nil
         unit = config.unit
+        deskOffsetMM = config.deskOffsetMM
         autoRunUp = config.autoRunUp
         autoRunDown = config.autoRunDown
         startAtLogin = config.startAtLogin
@@ -213,8 +215,15 @@ public final class DeskViewModel: ObservableObject {
     /// Updates the height display unit, recalculates `heightDisplay`, and persists to config.
     public func updateUnit(_ newUnit: HeightUnit) {
         unit = newUnit
-        heightDisplay = heightMM.map { HeightConverter.display(mm: $0, unit: newUnit) } ?? "—"
+        heightDisplay = heightMM.map { HeightConverter.display(mm: $0 + deskOffsetMM, unit: newUnit) } ?? "—"
         persistConfig { $0.unit = newUnit }
+    }
+
+    /// Updates the desk base offset and recalculates all displayed heights.
+    public func updateDeskOffset(_ mm: Int) {
+        deskOffsetMM = mm
+        heightDisplay = heightMM.map { HeightConverter.display(mm: $0 + mm, unit: unit) } ?? "—"
+        persistConfig { $0.deskOffsetMM = mm }
     }
 
     /// Updates the up-movement run mode and persists to config.
@@ -280,10 +289,29 @@ public final class DeskViewModel: ObservableObject {
     private func apply(_ snapshot: DeskState) {
         connectionState = snapshot.connectionState
         heightMM = snapshot.heightMM
-        heightDisplay = snapshot.heightMM.map { HeightConverter.display(mm: $0, unit: unit) } ?? "—"
+
+        // Update offset from desk state (handshake may have provided a new one).
+        if snapshot.deskOffsetMM > 0 {
+            deskOffsetMM = snapshot.deskOffsetMM
+        }
+
+        let offset = deskOffsetMM
+        heightDisplay = snapshot.heightMM.map {
+            HeightConverter.display(mm: $0 + offset, unit: unit)
+        } ?? "—"
+
         isMoving = snapshot.isMoving
         moveDirection = snapshot.moveDirection
-        presets = snapshot.presets
+
+        // Apply offset to preset heights for display.
+        presets = snapshot.presets.map { preset in
+            var adjusted = preset
+            if let h = preset.heightMM {
+                adjusted.heightMM = h + offset
+            }
+            return adjusted
+        }
+
         activePreset = snapshot.activePreset
         targetPreset = snapshot.targetPreset
         deskName = snapshot.deskName

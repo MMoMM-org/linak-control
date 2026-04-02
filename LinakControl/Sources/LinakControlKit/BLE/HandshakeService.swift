@@ -18,10 +18,14 @@ public struct HandshakeResult: Sendable {
     /// The first height notification received during the handshake, if any.
     public let currentHeight: Int?
 
-    public init(capabilities: DeskCapabilities, presetHeights: [Int?], currentHeight: Int?) {
+    /// Desk base offset in mm, parsed from GET_DESK_OFFSET. `nil` if not reported.
+    public let deskOffsetMM: Int?
+
+    public init(capabilities: DeskCapabilities, presetHeights: [Int?], currentHeight: Int?, deskOffsetMM: Int? = nil) {
         self.capabilities = capabilities
         self.presetHeights = presetHeights
         self.currentHeight = currentHeight
+        self.deskOffsetMM = deskOffsetMM
     }
 }
 
@@ -94,15 +98,17 @@ public func performHandshake(using bleController: any BLEControllerProtocol) asy
 
     // Step 5: Parse results
     let capabilities = try parseCapabilitiesOrThrow(from: dpgResponses)
+    let deskOffsetMM = parseDeskOffset(from: dpgResponses)
     let presetHeights = parsePresetHeights(from: dpgResponses)
     let currentHeight = await heightTask.value
 
-    FileLog.debug("handshake: DONE -- height=\(currentHeight.map(String.init) ?? "nil") presets=\(presetHeights)", category: "handshake")
+    FileLog.debug("handshake: DONE -- height=\(currentHeight.map(String.init) ?? "nil") offset=\(deskOffsetMM.map(String.init) ?? "nil") presets=\(presetHeights)", category: "handshake")
 
     return HandshakeResult(
         capabilities: capabilities,
         presetHeights: presetHeights,
-        currentHeight: currentHeight
+        currentHeight: currentHeight,
+        deskOffsetMM: deskOffsetMM
     )
 }
 
@@ -241,6 +247,12 @@ private func parseCapabilitiesOrThrow(from responses: [Data]) throws -> DeskCapa
         throw DeskError.handshakeTimeout
     }
     return capabilities
+}
+
+private func parseDeskOffset(from responses: [Data]) -> Int? {
+    // responses[2] is the GET_DESK_OFFSET response
+    guard responses.count > 2 else { return nil }
+    return parseDeskOffset(responses[2])
 }
 
 private func parsePresetHeights(from responses: [Data]) -> [Int?] {

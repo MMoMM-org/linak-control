@@ -88,6 +88,20 @@ public func parsePresetHeight(_ data: Data) -> Int? {
     return Int(rawHeight) / 10
 }
 
+/// Parse a desk offset response to the 7F 88 query on characteristic 99fa0011.
+///
+/// DPG response format: [status, length, offset_lo, offset_hi, ...].
+/// Offset is a uint16 in 0.1 mm units at bytes [2:3] (little-endian).
+/// Returns nil when data is too short or the offset is zero.
+public func parseDeskOffset(_ data: Data) -> Int? {
+    guard data.count >= 4 else { return nil }
+
+    let rawOffset = UInt16(data[2]) | (UInt16(data[3]) << 8)
+    guard rawOffset != 0 else { return nil }
+
+    return Int(rawOffset) / 10
+}
+
 // MARK: - Encoding
 
 /// Encode a target height in mm as a 2-byte little-endian uint16 (0.1 mm units)

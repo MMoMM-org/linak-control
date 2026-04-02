@@ -18,16 +18,16 @@ final class HeightConverterTests: XCTestCase {
 
     func testDisplayCentimetres_minimumDeskHeight() {
         // ~620 mm is the lowest position on a typical LINAK DPG1C desk
-        XCTAssertEqual(HeightConverter.display(mm: 620, unit: .cm), "62.0 cm")
+        XCTAssertEqual(HeightConverter.display(mm: 620, unit: .cm), "62 cm")
     }
 
     func testDisplayCentimetres_maximumDeskHeight() {
         // ~1300 mm is the highest position on a typical LINAK DPG1C desk
-        XCTAssertEqual(HeightConverter.display(mm: 1300, unit: .cm), "130.0 cm")
+        XCTAssertEqual(HeightConverter.display(mm: 1300, unit: .cm), "130 cm")
     }
 
     func testDisplayCentimetres_zeroHeight() {
-        XCTAssertEqual(HeightConverter.display(mm: 0, unit: .cm), "0.0 cm")
+        XCTAssertEqual(HeightConverter.display(mm: 0, unit: .cm), "0 cm")
     }
 
     func testDisplayCentimetres_oneDecimalPlace() {
@@ -42,8 +42,8 @@ final class HeightConverterTests: XCTestCase {
     }
 
     func testDisplayInches_lowerTypicalHeight() {
-        // 737 / 25.4 = 29.015…, rounds to 29.0
-        XCTAssertEqual(HeightConverter.display(mm: 737, unit: .inch), "29.0 in")
+        // 737 / 25.4 = 29.015..., rounds to 29.0 -> fractional < 0.05, show "29 in"
+        XCTAssertEqual(HeightConverter.display(mm: 737, unit: .inch), "29 in")
     }
 
     func testDisplayInches_minimumDeskHeight() {
@@ -57,7 +57,7 @@ final class HeightConverterTests: XCTestCase {
     }
 
     func testDisplayInches_zeroHeight() {
-        XCTAssertEqual(HeightConverter.display(mm: 0, unit: .inch), "0.0 in")
+        XCTAssertEqual(HeightConverter.display(mm: 0, unit: .inch), "0 in")
     }
 
     // MARK: - toCentimeters / toInches — raw conversion values

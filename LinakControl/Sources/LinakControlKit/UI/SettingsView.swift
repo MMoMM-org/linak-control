@@ -30,6 +30,8 @@ public struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     DisplayUnitSection(viewModel: viewModel)
                     SettingsDivider()
+                    DeskOffsetSection(viewModel: viewModel)
+                    SettingsDivider()
                     MovementModeSection(viewModel: viewModel)
                     SettingsDivider()
                     PresetsSection(viewModel: viewModel)
@@ -122,6 +124,55 @@ private struct DisplayUnitSection: View {
             .pickerStyle(.segmented)
             .labelsHidden()
         }
+    }
+}
+
+// MARK: - DeskOffsetSection
+
+private struct DeskOffsetSection: View {
+    @ObservedObject var viewModel: DeskViewModel
+    @State private var offsetText: String = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            SectionHeader(title: "Desk Offset")
+
+            HStack {
+                Text("Offset:")
+                    .foregroundColor(.secondary)
+                TextField("cm", text: $offsetText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 80)
+                    .onAppear { offsetText = formatCM(viewModel.deskOffsetMM) }
+                    .onSubmit { applyOffset() }
+                    .onChange(of: viewModel.deskOffsetMM) { _ in
+                        offsetText = formatCM(viewModel.deskOffsetMM)
+                    }
+                Text("cm")
+                    .foregroundColor(.secondary)
+            }
+
+            Text("Height at lowest desk position")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    private func formatCM(_ mm: Int) -> String {
+        let cm = Double(mm) / 10.0
+        let fractional = cm.truncatingRemainder(dividingBy: 1)
+        if abs(fractional) < 0.05 {
+            return "\(Int(cm.rounded()))"
+        }
+        return String(format: "%.1f", cm)
+    }
+
+    private func applyOffset() {
+        let cleaned = offsetText.replacingOccurrences(of: ",", with: ".")
+        guard let cm = Double(cleaned) else { return }
+        let mm = Int((cm * 10).rounded())
+        let clamped = max(0, min(mm, 15000))
+        viewModel.updateDeskOffset(clamped)
     }
 }
 

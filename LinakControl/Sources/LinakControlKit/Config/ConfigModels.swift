@@ -22,6 +22,10 @@ public struct AppConfig: Codable, Equatable {
     /// Height display unit. Defaults to .cm.
     public var unit: HeightUnit
 
+    /// Desk base offset in mm. Raw heights from the desk are relative to its internal
+    /// zero point; adding this offset gives the absolute height from floor.
+    public var deskOffsetMM: Int
+
     // MARK: Movement
 
     /// Up button behaviour. Defaults to .manual (hold to move).
@@ -58,6 +62,7 @@ public struct AppConfig: Codable, Equatable {
         pairedDeskUUID: String? = nil,
         pairedDeskName: String? = nil,
         unit: HeightUnit = .cm,
+        deskOffsetMM: Int = 0,
         autoRunUp: RunMode = .manual,
         autoRunDown: RunMode = .manual,
         startAtLogin: Bool = false,
@@ -70,6 +75,7 @@ public struct AppConfig: Codable, Equatable {
         self.pairedDeskUUID = pairedDeskUUID
         self.pairedDeskName = pairedDeskName
         self.unit = unit
+        self.deskOffsetMM = deskOffsetMM
         self.autoRunUp = autoRunUp
         self.autoRunDown = autoRunDown
         self.startAtLogin = startAtLogin
@@ -86,6 +92,7 @@ public struct AppConfig: Codable, Equatable {
         case pairedDeskUUID   = "paired_desk_uuid"
         case pairedDeskName   = "paired_desk_name"
         case unit
+        case deskOffsetMM     = "desk_offset_mm"
         case autoRunUp        = "auto_run_up"
         case autoRunDown      = "auto_run_down"
         case startAtLogin     = "start_at_login"

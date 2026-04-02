@@ -111,7 +111,7 @@ final class DeskViewModelStateStreamTests: XCTestCase {
 
         await waitFor { await MainActor.run { viewModel.heightDisplay != "—" } }
 
-        XCTAssertEqual(viewModel.heightDisplay, "73.0 cm")
+        XCTAssertEqual(viewModel.heightDisplay, "73 cm")
     }
 
     func testPresetsPopulatedFromHandshake() async throws {

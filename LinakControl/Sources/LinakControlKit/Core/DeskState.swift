@@ -45,6 +45,9 @@ public struct DeskState {
     public var presets: [PresetPosition]
     public var activePreset: Int?
 
+    /// Desk base offset in mm. Added to raw heights for display.
+    public var deskOffsetMM: Int
+
     public init() {
         connectionState = .disconnected
         deskName = nil
@@ -55,6 +58,7 @@ public struct DeskState {
         targetPreset = nil
         presets = (1...4).map { PresetPosition(index: $0) }
         activePreset = nil
+        deskOffsetMM = 0
     }
 }
 

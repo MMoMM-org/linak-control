@@ -207,14 +207,24 @@ extension DeskManager {
         state.connectionState = .connected
         state.deskName = config.pairedDeskName
 
-        persistPairingInfo(peripheralId: peripheralId, existingConfig: config)
+        // Use handshake offset if available, otherwise fall back to config.
+        if let offset = result.deskOffsetMM, offset > 0 {
+            state.deskOffsetMM = offset
+        } else {
+            state.deskOffsetMM = config.deskOffsetMM
+        }
+
+        persistPairingInfo(peripheralId: peripheralId, deskOffsetMM: result.deskOffsetMM, existingConfig: config)
         stateContinuation.yield(state)
     }
 
-    /// Saves the paired desk UUID to config.
-    private func persistPairingInfo(peripheralId: UUID, existingConfig: AppConfig) {
+    /// Saves the paired desk UUID and optional offset to config.
+    private func persistPairingInfo(peripheralId: UUID, deskOffsetMM: Int?, existingConfig: AppConfig) {
         var updated = existingConfig
         updated.pairedDeskUUID = peripheralId.uuidString
+        if let offset = deskOffsetMM, offset > 0 {
+            updated.deskOffsetMM = offset
+        }
         try? configStore.save(updated)
     }
 

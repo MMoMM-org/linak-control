@@ -139,7 +139,7 @@ final class UIBLEPresetSwitchTests: XCTestCase {
         // Confirm baseline height from handshake.
         await waitFor { harness.viewModel.heightMM == 730 }
         XCTAssertEqual(harness.viewModel.heightMM, 730)
-        XCTAssertEqual(harness.viewModel.heightDisplay, "73.0 cm")
+        XCTAssertEqual(harness.viewModel.heightDisplay, "73 cm")
 
         // Emit a new height notification simulating movement to 900mm.
         harness.heightCont.yield(makeHeightPacket(mm: 900))
@@ -147,7 +147,7 @@ final class UIBLEPresetSwitchTests: XCTestCase {
         await waitFor { harness.viewModel.heightMM == 900 }
 
         XCTAssertEqual(harness.viewModel.heightMM, 900)
-        XCTAssertEqual(harness.viewModel.heightDisplay, "90.0 cm")
+        XCTAssertEqual(harness.viewModel.heightDisplay, "90 cm")
 
         harness.heightCont.finish()
     }
