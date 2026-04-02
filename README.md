@@ -105,6 +105,18 @@ The LINAK DPG1C desk communicates via four BLE services:
 
 DPG queries use 3-byte read format `[0x7F, cmd, 0x00]` and require USER_ID session activation before responding. Height values are uint16 in 0.1mm units (little-endian). See `DeskCharacteristics.swift` and `DeskProtocol.swift` for full protocol details.
 
+## Acknowledgements
+
+The BLE protocol implementation is based on reverse-engineering work from these open-source projects:
+
+- [linak-controller](https://github.com/rhyst/linak-controller) -- Python desk controller by rhyst. Key reference for DPG1C handshake, USER_ID activation, and base offset parsing.
+- [LinakDeskApp](https://github.com/anetczuk/LinakDeskApp) -- Linux desktop app by anetczuk. Reference for BLE service UUIDs, characteristics, and command bytes.
+- [linak-desk-spec](https://github.com/anson-vandoren/linak-desk-spec) -- Protocol specification by anson-vandoren. Detailed reverse-engineered documentation of the DPG1C wire format.
+- [hass-linak-dpg](https://github.com/Laeborg/hass-linak-dpg) -- Home Assistant integration by Laeborg.
+- [linak_desk](https://github.com/mdrwiega/linak_desk) -- Home Assistant component by mdrwiega.
+
+See [docs/spec.md](docs/spec.md) for the full project specification.
+
 ## License
 
 Personal use. Not distributed via App Store.
