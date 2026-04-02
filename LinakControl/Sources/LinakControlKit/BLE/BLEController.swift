@@ -148,6 +148,11 @@ public final class BLEController: NSObject, BLEControllerProtocol, @unchecked Se
                     return
                 }
 
+                let hex = data.map { String(format: "%02x", $0) }.joined(separator: " ")
+                let typeStr = type == .withResponse ? "withResponse" : "withoutResponse"
+                let props = characteristic.properties
+                FileLog.debug("write: [\(hex)] to \(characteristicUUID.uuidString) type=\(typeStr) props=\(props.rawValue)", category: "ble")
+
                 if type == .withResponse {
                     writeContinuations[characteristicUUID] = continuation
                 } else {

@@ -243,6 +243,11 @@ extension DeskManager {
     }
 
     private func shouldSendHeartbeat() -> Bool {
+        // Suppress heartbeat during movement — the movement loop and preset
+        // control loop already write to the same characteristic (0x0031).
+        // Interleaving heartbeats disrupts the move-to target.
+        guard !state.isMoving else { return false }
+
         guard let last = lastUserAction else {
             return true  // no action yet — keep desk awake by default
         }
