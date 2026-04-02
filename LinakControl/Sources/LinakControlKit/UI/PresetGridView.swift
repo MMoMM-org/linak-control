@@ -83,7 +83,7 @@ private struct PresetCell: View {
         .scaleEffect(isPulsing ? 0.96 : 1.0)
         .opacity(cellOpacity)
         .contentShape(Rectangle())
-        .onTapGesture {
+        .onTapGesture(count: 2) {
             guard isConnected, hasHeight else { return }
             onTap()
         }

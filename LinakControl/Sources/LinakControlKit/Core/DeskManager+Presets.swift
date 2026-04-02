@@ -127,11 +127,18 @@ extension DeskManager {
     }
 
     /// Clears movement and target state after the control loop completes.
+    /// Sends stop commands to ensure the desk halts, then resets the movement flags.
     private func clearPresetMoveState() {
         FileLog.debug("clearPresetMoveState: height=\(state.heightMM.map(String.init) ?? "nil")", category: "core")
+        // Send stop to ensure desk stops and speed drops to zero.
+        Task {
+            try? await bleController.write(data: DeskCommand.stop, to: DeskUUID.command, type: .withoutResponse)
+            try? await bleController.write(data: DeskCommand.stop, to: DeskUUID.command, type: .withoutResponse)
+        }
         updateState {
             $0.isMoving = false
             $0.moveDirection = nil
+            $0.speedMMS = 0
             $0.targetPreset = nil
         }
     }

@@ -208,25 +208,26 @@ extension DeskManager {
         state.heightMM = result.currentHeight
         state.connectionState = .connected
         state.deskName = config.pairedDeskName
+        state.deskOffsetMM = config.deskOffsetMM
 
-        // Use handshake offset if available, otherwise fall back to config.
-        if let offset = result.deskOffsetMM, offset > 0 {
-            state.deskOffsetMM = offset
-        } else {
-            state.deskOffsetMM = config.deskOffsetMM
+        // Detect active preset from initial height reading.
+        if let height = result.currentHeight {
+            state.activePreset = activePreset(
+                height: height,
+                presets: state.presets,
+                isMoving: false
+            )
         }
 
-        persistPairingInfo(peripheralId: peripheralId, deskOffsetMM: result.deskOffsetMM, existingConfig: config)
+        persistPairingInfo(peripheralId: peripheralId, existingConfig: config)
         stateContinuation.yield(state)
     }
 
-    /// Saves the paired desk UUID and optional offset to config.
-    private func persistPairingInfo(peripheralId: UUID, deskOffsetMM: Int?, existingConfig: AppConfig) {
+    /// Saves the paired desk UUID to config. Does NOT touch deskOffsetMM —
+    /// the user's manual offset setting is the single source of truth.
+    private func persistPairingInfo(peripheralId: UUID, existingConfig: AppConfig) {
         var updated = existingConfig
         updated.pairedDeskUUID = peripheralId.uuidString
-        if let offset = deskOffsetMM, offset > 0 {
-            updated.deskOffsetMM = offset
-        }
         try? configStore.save(updated)
     }
 
