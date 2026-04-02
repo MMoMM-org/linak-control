@@ -11,17 +11,7 @@ private let pairedDeskUUID = UUID()
 
 // MARK: - Test Factories
 
-private func makeTempConfigStore(pairedUUID: UUID? = nil) -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("ReconnectionTests-\(UUID().uuidString)")
-    let store = ConfigStore(directoryURL: tempDir)
-    if let uuid = pairedUUID {
-        var config = AppConfig.default
-        config.pairedDeskUUID = uuid.uuidString
-        try? store.save(config)
-    }
-    return store
-}
+// makeTempConfigStore is provided by TestHelpers.swift (with pairedUUID: parameter)
 
 private func makeManager(
     mock: MockBLEController,
@@ -54,18 +44,10 @@ private func configureHappyPath(_ mock: MockBLEController) {
     )
 }
 
-private func makeDPGStream(responses: [Data]) -> AsyncStream<Data> {
-    AsyncStream { continuation in
-        for r in responses { continuation.yield(r) }
-        continuation.finish()
-    }
-}
+// makeDPGStream is provided by TestHelpers.swift
 
 private func makeFiniteHeightStream(values: [Data]) -> AsyncStream<Data> {
-    AsyncStream { continuation in
-        for v in values { continuation.yield(v) }
-        continuation.finish()
-    }
+    makeDPGStream(responses: values)
 }
 
 private func heartbeatWrites(in mock: MockBLEController) -> Int {

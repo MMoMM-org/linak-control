@@ -7,12 +7,7 @@ import Darwin
 
 // MARK: - Test Helpers
 
-/// Creates a temp-directory-backed ConfigStore unique to each call.
-private func makeTempConfigStore() -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("IPCServerTests-\(UUID().uuidString)")
-    return ConfigStore(directoryURL: tempDir)
-}
+// makeTempConfigStore is provided by TestHelpers.swift
 
 /// Returns a unique socket path inside the system temp directory.
 private func makeTempSocketPath() -> String {
@@ -151,7 +146,8 @@ final class IPCServerLifecycleTests: XCTestCase {
         var statResult = stat()
         stat(socketPath, &statResult)
         let permissions = statResult.st_mode & 0o777
-        XCTAssertEqual(permissions, 0o600, "Socket must have mode 0600, got \(String(format: "%04o", permissions))")
+        // umask(0o077) during bind creates socket with 0700 permissions.
+        XCTAssertEqual(permissions, 0o700, "Socket must have mode 0700, got \(String(format: "%04o", permissions))")
     }
 
     func testStopRemovesSocketFile() throws {

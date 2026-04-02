@@ -33,7 +33,14 @@ public final class IPCServer: @unchecked Sendable {
     // MARK: Socket state
 
     private var serverFileDescriptor: Int32 = -1
-    private var acceptTask: Task<Void, Never>?
+    private let acceptQueue = DispatchQueue(label: "com.linakcontrol.ipc.accept")
+    private let clientQueue = DispatchQueue(label: "com.linakcontrol.ipc.client", attributes: .concurrent)
+    private var isAccepting = false
+
+    // MARK: Connection limit
+
+    private static let maxConcurrentConnections = 8
+    private let connectionSemaphore = DispatchSemaphore(value: maxConcurrentConnections)
 
     // MARK: Init
 
@@ -63,17 +70,16 @@ public final class IPCServer: @unchecked Sendable {
 
         try bindAndListen(fd: fd)
         serverFileDescriptor = fd
-        chmod(socketPath, 0o600)
+        isAccepting = true
 
-        acceptTask = Task { [weak self] in
-            await self?.runAcceptLoop()
+        acceptQueue.async { [weak self] in
+            self?.runAcceptLoop()
         }
     }
 
     /// Cancels the accept loop, closes the server socket, and removes the socket file.
     public func stop() {
-        acceptTask?.cancel()
-        acceptTask = nil
+        isAccepting = false
 
         if serverFileDescriptor >= 0 {
             close(serverFileDescriptor)
@@ -140,11 +146,17 @@ public final class IPCServer: @unchecked Sendable {
             }
         }
 
+        // Set restrictive umask before bind to avoid TOCTOU race on socket permissions.
+        // The socket file is created by bind() with permissions masked by umask, so
+        // 0o077 ensures it is created as owner-only (0o600) from the start.
+        let previousUmask = umask(0o077)
         let bindResult = withUnsafePointer(to: &addr) { ptr in
             ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPtr in
                 bind(fd, sockaddrPtr, socklen_t(MemoryLayout<sockaddr_un>.size))
             }
         }
+        umask(previousUmask)
+
         guard bindResult == 0 else {
             close(fd)
             throw IPCServerError.socketSetupFailed("bind() failed: \(String(cString: strerror(errno)))")
@@ -158,18 +170,34 @@ public final class IPCServer: @unchecked Sendable {
 
     // MARK: - Accept Loop
 
-    private func runAcceptLoop() async {
-        while !Task.isCancelled {
+    /// Runs on `acceptQueue`. Calls blocking `accept()` on a dedicated thread,
+    /// not the cooperative thread pool, to avoid starving Swift Concurrency.
+    private func runAcceptLoop() {
+        while isAccepting {
             let clientFD = accept(serverFileDescriptor, nil, nil)
             guard clientFD >= 0 else { break }
-            Task { await self.handleClient(fd: clientFD) }
+
+            // Enforce connection limit — reject when at capacity.
+            guard connectionSemaphore.wait(timeout: .now()) == .success else {
+                close(clientFD)
+                continue
+            }
+
+            clientQueue.async { [weak self] in
+                self?.handleClient(fd: clientFD)
+            }
         }
     }
 
     // MARK: - Client Handling
 
-    private func handleClient(fd: Int32) async {
-        defer { close(fd) }
+    /// Runs on `clientQueue`. Blocking `read()` calls execute on a DispatchQueue
+    /// thread, not the cooperative thread pool. Bridges to async for message processing.
+    private func handleClient(fd: Int32) {
+        defer {
+            close(fd)
+            connectionSemaphore.signal()
+        }
 
         var buffer = Data()
         let chunkSize = 4096
@@ -187,7 +215,12 @@ public final class IPCServer: @unchecked Sendable {
 
             while let (message, remaining) = IPCFraming.deframe(buffer) {
                 buffer = remaining
-                await processMessage(message, fd: fd)
+                let semaphore = DispatchSemaphore(value: 0)
+                Task { [weak self] in
+                    await self?.processMessage(message, fd: fd)
+                    semaphore.signal()
+                }
+                semaphore.wait()
             }
         }
     }

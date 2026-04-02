@@ -26,10 +26,7 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertEqual(config.autoRunDown, .manual)
         XCTAssertFalse(config.startAtLogin)
         XCTAssertFalse(config.hotkeysEnabled)
-        XCTAssertNil(config.preset1Label)
-        XCTAssertNil(config.preset2Label)
-        XCTAssertNil(config.preset3Label)
-        XCTAssertNil(config.preset4Label)
+        XCTAssertEqual(config.presetLabels, [nil, nil, nil, nil])
     }
 
     // MARK: - Load returns default when file absent
@@ -80,10 +77,7 @@ final class ConfigStoreTests: XCTestCase {
         original.autoRunDown = .auto
         original.startAtLogin = true
         original.hotkeysEnabled = true
-        original.preset1Label = "Sitting"
-        original.preset2Label = "Standing"
-        original.preset3Label = "Video Call"
-        original.preset4Label = "Lunch"
+        original.presetLabels = ["Sitting", "Standing", "Video Call", "Lunch"]
 
         try store.save(original)
         let loaded = try store.load()
@@ -113,7 +107,7 @@ final class ConfigStoreTests: XCTestCase {
         config.autoRunDown = .auto
         config.startAtLogin = true
         config.hotkeysEnabled = true
-        config.preset1Label = "Sit"
+        config.presetLabels = ["Sit", nil, nil, nil]
 
         try store.save(config)
 
@@ -130,7 +124,10 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertNotNil(json["auto_run_down"], "Expected key 'auto_run_down'")
         XCTAssertNotNil(json["start_at_login"], "Expected key 'start_at_login'")
         XCTAssertNotNil(json["hotkeys_enabled"], "Expected key 'hotkeys_enabled'")
-        XCTAssertNotNil(json["preset_1_label"], "Expected key 'preset_1_label'")
+        XCTAssertNotNil(json["preset_labels"], "Expected key 'preset_labels'")
+
+        // Legacy individual keys must NOT appear in new format
+        XCTAssertNil(json["preset_1_label"])
 
         // Camel-case keys must NOT appear
         XCTAssertNil(json["pairedDeskUUID"])

@@ -27,13 +27,7 @@ final class MockHotkeyManager: HotkeyManaging {
 
 // MARK: - Helpers
 
-private func makeTempConfigStore(config: AppConfig = .default) -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("HotkeyManagerTests-\(UUID().uuidString)")
-    let store = ConfigStore(directoryURL: tempDir)
-    try? store.save(config)
-    return store
-}
+// makeTempConfigStore is provided by TestHelpers.swift (with config: parameter)
 
 // MARK: - MockHotkeyManager Protocol Tests
 

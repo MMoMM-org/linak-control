@@ -103,7 +103,7 @@ public func performHandshake(using bleController: any BLEControllerProtocol) asy
     var currentHeight: Int?
     FileLog.debug("handshake: step 5 -- reading current height", category: "handshake")
     if let data = try? await bleController.read(DeskUUID.height),
-       let (h, _) = parseHeightNotification(data) {
+       let (h, _) = DeskProtocol.parseHeightNotification(data) {
         currentHeight = h
     }
 
@@ -192,7 +192,7 @@ private func issueDPGQueries(
 
 private func parseCapabilitiesOrThrow(from responses: [Data]) throws -> DeskCapabilities {
     // responses[0] is the GET_CAPABILITIES (7F 80) response
-    guard let capabilities = parseCapabilities(responses[0]) else {
+    guard let capabilities = DeskProtocol.parseCapabilities(responses[0]) else {
         throw DeskError.invalidResponse
     }
     return capabilities
@@ -201,10 +201,10 @@ private func parseCapabilitiesOrThrow(from responses: [Data]) throws -> DeskCapa
 private func parseDeskOffset(from responses: [Data]) -> Int? {
     // responses[2] is the GET_DESK_OFFSET response
     guard responses.count > 2 else { return nil }
-    return parseDeskOffset(responses[2])
+    return DeskProtocol.parseDeskOffset(responses[2])
 }
 
 private func parsePresetHeights(from responses: [Data]) -> [Int?] {
     // responses[3..6] are preset 1-4 responses (indices 3, 4, 5, 6)
-    return (3...6).map { parsePresetHeight(responses[$0]) }
+    return (3...6).map { DeskProtocol.parsePresetHeight(responses[$0]) }
 }

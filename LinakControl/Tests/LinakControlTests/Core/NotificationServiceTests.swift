@@ -18,30 +18,10 @@ final class MockNotificationPoster: NotificationPosting, @unchecked Sendable {
 
 // MARK: - Test Factories
 
-private func makeTempConfigStore(pairedUUID: UUID? = nil) -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("NotificationTests-\(UUID().uuidString)")
-    let store = ConfigStore(directoryURL: tempDir)
-    if let uuid = pairedUUID {
-        var config = AppConfig.default
-        config.pairedDeskUUID = uuid.uuidString
-        try? store.save(config)
-    }
-    return store
-}
-
-private func makeDPGStream(responses: [Data]) -> AsyncStream<Data> {
-    AsyncStream { continuation in
-        for response in responses { continuation.yield(response) }
-        continuation.finish()
-    }
-}
+// makeTempConfigStore and makeDPGStream are provided by TestHelpers.swift
 
 private func makeFiniteHeightStream(values: [Data]) -> AsyncStream<Data> {
-    AsyncStream { continuation in
-        for value in values { continuation.yield(value) }
-        continuation.finish()
-    }
+    makeDPGStream(responses: values)
 }
 
 private func configureHappyPath(_ mock: MockBLEController) {

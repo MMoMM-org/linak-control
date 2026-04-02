@@ -6,11 +6,7 @@ import XCTest
 
 // MARK: - Helpers
 
-private func makeTempConfigStore() -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("DeskViewModelTests-\(UUID().uuidString)")
-    return ConfigStore(directoryURL: tempDir)
-}
+// makeTempConfigStore is provided by TestHelpers.swift
 
 private func makeHappyPathMock() -> MockBLEController {
     let mock = MockBLEController()
@@ -28,17 +24,7 @@ private func finiteStream(_ values: [Data]) -> AsyncStream<Data> {
     }
 }
 
-/// Polls until the predicate returns true or the timeout elapses.
-private func waitFor(
-    timeout: TimeInterval = 1.0,
-    predicate: @escaping () async -> Bool
-) async {
-    let deadline = ContinuousClock.now.advanced(by: .seconds(timeout))
-    while ContinuousClock.now < deadline {
-        if await predicate() { return }
-        try? await Task.sleep(for: .milliseconds(20))
-    }
-}
+// waitFor is provided by TestHelpers.swift
 
 /// Convenience factory that shares one ConfigStore between DeskManager and DeskViewModel.
 @MainActor

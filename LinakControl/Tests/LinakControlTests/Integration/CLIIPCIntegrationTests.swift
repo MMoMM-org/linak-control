@@ -14,12 +14,7 @@ private func makeTempSocketPath() -> String {
         .path
 }
 
-/// Returns a ConfigStore backed by an isolated temp directory.
-private func makeTempConfigStore() -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("CLIIPCIntegrationTests-\(UUID().uuidString)")
-    return ConfigStore(directoryURL: tempDir)
-}
+// makeTempConfigStore is provided by TestHelpers.swift
 
 /// Builds a DeskManager with a MockBLEController that produces no handshake (disconnected).
 private func makeDisconnectedManager(configStore: ConfigStore) -> DeskManager {

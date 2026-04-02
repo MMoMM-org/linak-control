@@ -37,22 +37,10 @@ private func makeConnectedManagerForSave(
     return (manager, mock)
 }
 
-private func makeDPGStream(responses: [Data]) -> AsyncStream<Data> {
-    AsyncStream { continuation in
-        for response in responses {
-            continuation.yield(response)
-        }
-        continuation.finish()
-    }
-}
+// makeDPGStream is provided by TestHelpers.swift
 
 private func makeFiniteStream(responses: [Data]) -> AsyncStream<Data> {
-    AsyncStream { continuation in
-        for response in responses {
-            continuation.yield(response)
-        }
-        continuation.finish()
-    }
+    makeDPGStream(responses: responses)
 }
 
 private func makeHeightStream(mm: Int) -> AsyncStream<Data> {
@@ -68,11 +56,7 @@ private func makeHeightStream(mm: Int) -> AsyncStream<Data> {
     }
 }
 
-private func makeTempConfigStore() -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("DeskManagerPresetSaveTests-\(UUID().uuidString)")
-    return ConfigStore(directoryURL: tempDir)
-}
+// makeTempConfigStore is provided by TestHelpers.swift
 
 // MARK: - Happy Path Tests
 

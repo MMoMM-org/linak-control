@@ -32,7 +32,7 @@ private func makeConnectedHarness() async throws -> UIBLEHarness {
     mock.mockNotificationStreams[DeskUUID.dpg] = makeHarnessDPGStream()
     mock.mockNotificationStreams[DeskUUID.height] = heightStream
 
-    let store = makeIntegrationTempConfigStore()
+    let store = makeTempConfigStore()
     let manager = DeskManager(bleController: mock, configStore: store)
     let viewModel = await DeskViewModel(deskManager: manager, configStore: store)
 
@@ -50,43 +50,10 @@ private func makeConnectedHarness() async throws -> UIBLEHarness {
 }
 
 private func makeHarnessDPGStream() -> AsyncStream<Data> {
-    AsyncStream { continuation in
-        for response in HandshakeFixtures.happyPathDPGResponses {
-            continuation.yield(response)
-        }
-        continuation.finish()
-    }
+    makeDPGStream(responses: HandshakeFixtures.happyPathDPGResponses)
 }
 
-/// Encodes a height notification packet (4 bytes, little-endian position and speed).
-private func makeHeightPacket(mm: Int, speedMMS: Int = 0) -> Data {
-    let rawPosition = UInt16(mm * 10)
-    let rawSpeed = UInt16(bitPattern: Int16(clamping: speedMMS))
-    return Data([
-        UInt8(rawPosition & 0xFF),
-        UInt8(rawPosition >> 8),
-        UInt8(rawSpeed & 0xFF),
-        UInt8(rawSpeed >> 8)
-    ])
-}
-
-private func makeIntegrationTempConfigStore() -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("UIBLEIntegrationTests-\(UUID().uuidString)")
-    return ConfigStore(directoryURL: tempDir)
-}
-
-/// Polls until the predicate returns true or the timeout elapses.
-private func waitFor(
-    timeout: TimeInterval = 2.0,
-    predicate: @escaping () async -> Bool
-) async {
-    let deadline = ContinuousClock.now.advanced(by: .seconds(timeout))
-    while ContinuousClock.now < deadline {
-        if await predicate() { return }
-        try? await Task.sleep(for: .milliseconds(20))
-    }
-}
+// makeHeightPacket, makeTempConfigStore, and waitFor are provided by TestHelpers.swift
 
 // MARK: - Preset switch end-to-end
 
@@ -187,7 +154,7 @@ final class UIBLEConnectionStateTests: XCTestCase {
         mock.mockNotificationStreams[DeskUUID.dpg] = makeHarnessDPGStream()
         mock.mockNotificationStreams[DeskUUID.height] = heightStream
 
-        let store = makeIntegrationTempConfigStore()
+        let store = makeTempConfigStore()
         let manager = DeskManager(bleController: mock, configStore: store)
         let viewModel = DeskViewModel(deskManager: manager, configStore: store)
 

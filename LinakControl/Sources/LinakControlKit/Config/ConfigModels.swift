@@ -44,17 +44,8 @@ public struct AppConfig: Codable, Equatable {
 
     // MARK: Preset Labels
 
-    /// Optional label for preset 1, e.g. "Sitting".
-    public var preset1Label: String?
-
-    /// Optional label for preset 2, e.g. "Standing".
-    public var preset2Label: String?
-
-    /// Optional label for preset 3.
-    public var preset3Label: String?
-
-    /// Optional label for preset 4.
-    public var preset4Label: String?
+    /// Optional labels for preset slots 1–4, e.g. ["Sitting", "Standing", nil, nil].
+    public var presetLabels: [String?]
 
     // MARK: Init
 
@@ -67,10 +58,7 @@ public struct AppConfig: Codable, Equatable {
         autoRunDown: RunMode = .manual,
         startAtLogin: Bool = false,
         hotkeysEnabled: Bool = false,
-        preset1Label: String? = nil,
-        preset2Label: String? = nil,
-        preset3Label: String? = nil,
-        preset4Label: String? = nil
+        presetLabels: [String?] = [nil, nil, nil, nil]
     ) {
         self.pairedDeskUUID = pairedDeskUUID
         self.pairedDeskName = pairedDeskName
@@ -80,10 +68,7 @@ public struct AppConfig: Codable, Equatable {
         self.autoRunDown = autoRunDown
         self.startAtLogin = startAtLogin
         self.hotkeysEnabled = hotkeysEnabled
-        self.preset1Label = preset1Label
-        self.preset2Label = preset2Label
-        self.preset3Label = preset3Label
-        self.preset4Label = preset4Label
+        self.presetLabels = presetLabels
     }
 
     // MARK: CodingKeys — snake_case JSON per SDD schema
@@ -97,6 +82,9 @@ public struct AppConfig: Codable, Equatable {
         case autoRunDown      = "auto_run_down"
         case startAtLogin     = "start_at_login"
         case hotkeysEnabled   = "hotkeys_enabled"
+        case presetLabels     = "preset_labels"
+
+        // Legacy keys for backward-compatible reading of old config files.
         case preset1Label     = "preset_1_label"
         case preset2Label     = "preset_2_label"
         case preset3Label     = "preset_3_label"
@@ -106,8 +94,9 @@ public struct AppConfig: Codable, Equatable {
     // MARK: Decodable — tolerant of missing keys
 
     /// Custom decoder that provides defaults for any missing keys.
-    /// Without this, adding a new field breaks decoding of old config files
-    /// and all persisted settings are lost.
+    /// Reads the new `preset_labels` array when present, otherwise falls back
+    /// to the legacy `preset_1_label`…`preset_4_label` individual keys for
+    /// backward compatibility with old config files.
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         pairedDeskUUID = try c.decodeIfPresent(String.self, forKey: .pairedDeskUUID)
@@ -118,10 +107,34 @@ public struct AppConfig: Codable, Equatable {
         autoRunDown    = try c.decodeIfPresent(RunMode.self, forKey: .autoRunDown) ?? .manual
         startAtLogin   = try c.decodeIfPresent(Bool.self, forKey: .startAtLogin) ?? false
         hotkeysEnabled = try c.decodeIfPresent(Bool.self, forKey: .hotkeysEnabled) ?? false
-        preset1Label   = try c.decodeIfPresent(String.self, forKey: .preset1Label)
-        preset2Label   = try c.decodeIfPresent(String.self, forKey: .preset2Label)
-        preset3Label   = try c.decodeIfPresent(String.self, forKey: .preset3Label)
-        preset4Label   = try c.decodeIfPresent(String.self, forKey: .preset4Label)
+
+        if let labels = try c.decodeIfPresent([String?].self, forKey: .presetLabels) {
+            presetLabels = labels
+        } else {
+            presetLabels = [
+                try c.decodeIfPresent(String.self, forKey: .preset1Label),
+                try c.decodeIfPresent(String.self, forKey: .preset2Label),
+                try c.decodeIfPresent(String.self, forKey: .preset3Label),
+                try c.decodeIfPresent(String.self, forKey: .preset4Label),
+            ]
+        }
+    }
+
+    // MARK: Encodable — write only the new format
+
+    /// Encodes using the new `preset_labels` array key only. Legacy individual
+    /// keys are not written — they are read-only for migration.
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(pairedDeskUUID, forKey: .pairedDeskUUID)
+        try c.encodeIfPresent(pairedDeskName, forKey: .pairedDeskName)
+        try c.encode(unit, forKey: .unit)
+        try c.encode(deskOffsetMM, forKey: .deskOffsetMM)
+        try c.encode(autoRunUp, forKey: .autoRunUp)
+        try c.encode(autoRunDown, forKey: .autoRunDown)
+        try c.encode(startAtLogin, forKey: .startAtLogin)
+        try c.encode(hotkeysEnabled, forKey: .hotkeysEnabled)
+        try c.encode(presetLabels, forKey: .presetLabels)
     }
 
     // MARK: Defaults

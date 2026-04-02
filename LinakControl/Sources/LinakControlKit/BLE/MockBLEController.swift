@@ -23,16 +23,43 @@ public final class MockBLEController: BLEControllerProtocol, @unchecked Sendable
     /// Streams returned by ``notifications(for:)`` keyed by characteristic UUID.
     public var mockNotificationStreams: [CBUUID: AsyncStream<Data>] = [:]
 
-    // MARK: - Captured outputs
+    // MARK: - Thread safety
+
+    /// Protects mutable captured-output arrays from concurrent access.
+    private let lock = NSLock()
+
+    // MARK: - Captured outputs (lock-protected)
+
+    /// Backing storage for ``writtenData``. Access via the computed property or ``getWrittenData()``.
+    private var _writtenData: [(data: Data, characteristic: CBUUID)] = []
 
     /// All writes captured by ``write(data:to:type:)`` in call order.
-    public var writtenData: [(data: Data, characteristic: CBUUID)] = []
+    ///
+    /// Thread-safe: reads and writes are protected by an internal lock.
+    public var writtenData: [(data: Data, characteristic: CBUUID)] {
+        get { lock.withLock { _writtenData } }
+        set { lock.withLock { _writtenData = newValue } }
+    }
+
+    /// Backing storage for ``notifyValueCalls``.
+    private var _notifyValueCalls: [(enabled: Bool, characteristic: CBUUID)] = []
 
     /// All setNotifyValue calls captured in call order.
-    public private(set) var notifyValueCalls: [(enabled: Bool, characteristic: CBUUID)] = []
+    public var notifyValueCalls: [(enabled: Bool, characteristic: CBUUID)] {
+        get { lock.withLock { _notifyValueCalls } }
+        set { lock.withLock { _notifyValueCalls = newValue } }
+    }
+
+    /// Backing storage for ``connectCallCount``.
+    private var _connectCallCount: Int = 0
 
     /// Number of times ``connect(peripheralId:)`` has been called.
-    public private(set) var connectCallCount: Int = 0
+    ///
+    /// Thread-safe: reads and writes are protected by an internal lock.
+    public var connectCallCount: Int {
+        get { lock.withLock { _connectCallCount } }
+        set { lock.withLock { _connectCallCount = newValue } }
+    }
 
     // MARK: - Behaviour control
 
@@ -82,7 +109,7 @@ public final class MockBLEController: BLEControllerProtocol, @unchecked Sendable
     // MARK: - BLEControllerProtocol — connect / disconnect
 
     public func connect(peripheralId: UUID) async throws {
-        connectCallCount += 1
+        lock.withLock { _connectCallCount += 1 }
         if connectDelay > .zero {
             try await Task.sleep(for: connectDelay)
         }
@@ -102,7 +129,9 @@ public final class MockBLEController: BLEControllerProtocol, @unchecked Sendable
         to characteristic: CBUUID,
         type: CBCharacteristicWriteType
     ) async throws {
-        writtenData.append((data: data, characteristic: characteristic))
+        lock.withLock {
+            _writtenData.append((data: data, characteristic: characteristic))
+        }
     }
 
     // MARK: - BLEControllerProtocol — read
@@ -124,6 +153,8 @@ public final class MockBLEController: BLEControllerProtocol, @unchecked Sendable
     }
 
     public func setNotifyValue(_ enabled: Bool, for characteristic: CBUUID) async throws {
-        notifyValueCalls.append((enabled: enabled, characteristic: characteristic))
+        lock.withLock {
+            _notifyValueCalls.append((enabled: enabled, characteristic: characteristic))
+        }
     }
 }

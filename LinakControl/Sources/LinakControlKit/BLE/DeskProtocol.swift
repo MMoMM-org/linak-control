@@ -38,92 +38,99 @@ public enum DeskLimits {
     public static let autoDownTargetTenths: UInt16 = UInt16(safeCommandRange.lowerBound * 10)
 }
 
-// MARK: - Decoding
+// MARK: - DeskProtocol namespace
 
-/// Parse a 4-byte height notification from characteristic 99fa0021.
-///
-/// Layout (little-endian):
-/// - Bytes [0:1]: position as uint16 in 0.1 mm units
-/// - Bytes [2:3]: speed as int16 in raw units
-///
-/// Returns nil when data is too short or the decoded height falls outside
-/// `validHeightRange` (500...1500 mm).
-public func parseHeightNotification(_ data: Data) -> (heightMM: Int, speedMMS: Int)? {
-    guard data.count >= 4 else { return nil }
+/// Namespace for DPG1C BLE protocol parsing and encoding functions.
+/// Groups all wire-format conversions in one place to avoid free-function pollution.
+public enum DeskProtocol {
 
-    let rawPosition = UInt16(data[0]) | (UInt16(data[1]) << 8)
-    let rawSpeed    = Int16(bitPattern: UInt16(data[2]) | (UInt16(data[3]) << 8))
+    // MARK: - Decoding
 
-    let heightMM = Int(rawPosition) / 10
+    /// Parse a 4-byte height notification from characteristic 99fa0021.
+    ///
+    /// Layout (little-endian):
+    /// - Bytes [0:1]: position as uint16 in 0.1 mm units
+    /// - Bytes [2:3]: speed as int16 in raw units
+    ///
+    /// Returns nil when data is too short or the decoded height falls outside
+    /// `validHeightRange` (0...7000 mm).
+    public static func parseHeightNotification(_ data: Data) -> (heightMM: Int, speedMMS: Int)? {
+        guard data.count >= 4 else { return nil }
 
-    guard DeskLimits.validHeightRange.contains(heightMM) else { return nil }
+        let rawPosition = UInt16(data[0]) | (UInt16(data[1]) << 8)
+        let rawSpeed    = Int16(bitPattern: UInt16(data[2]) | (UInt16(data[3]) << 8))
 
-    return (heightMM: heightMM, speedMMS: Int(rawSpeed))
-}
+        let heightMM = Int(rawPosition) / 10
 
-/// Parse a capabilities response to the 7F 80 query on characteristic 99fa0011.
-///
-/// Response byte 2 bit layout:
-/// - bits 0-2: preset count (0-4)
-/// - bit 3:   hasAutoUp
-/// - bit 4:   hasAutoDown
-///
-/// Returns nil when data is too short to contain byte 2.
-public func parseCapabilities(_ data: Data) -> DeskCapabilities? {
-    guard data.count >= 3 else { return nil }
+        guard DeskLimits.validHeightRange.contains(heightMM) else { return nil }
 
-    let flags = data[2]
-    let presetCount = Int(flags & 0b00000111)
-    let hasAutoUp   = (flags & 0b00001000) != 0
-    let hasAutoDown = (flags & 0b00010000) != 0
+        return (heightMM: heightMM, speedMMS: Int(rawSpeed))
+    }
 
-    return DeskCapabilities(
-        presetCount: presetCount,
-        hasAutoUp: hasAutoUp,
-        hasAutoDown: hasAutoDown
-    )
-}
+    /// Parse a capabilities response to the 7F 80 query on characteristic 99fa0011.
+    ///
+    /// Response byte 2 bit layout:
+    /// - bits 0-2: preset count (0-4)
+    /// - bit 3:   hasAutoUp
+    /// - bit 4:   hasAutoDown
+    ///
+    /// Returns nil when data is too short to contain byte 2.
+    public static func parseCapabilities(_ data: Data) -> DeskCapabilities? {
+        guard data.count >= 3 else { return nil }
 
-/// Parse a preset height response to a 7F 89-8C query on characteristic 99fa0011.
-///
-/// DPG response format: [status, length, slot, height_lo, height_hi, ...].
-/// Height is a uint16 in 0.1 mm units at bytes [3:4] (little-endian).
-/// Returns nil when data is too short, or when the preset is unset (0xFFFF).
-public func parsePresetHeight(_ data: Data) -> Int? {
-    guard data.count >= 5 else { return nil }
+        let flags = data[2]
+        let presetCount = Int(flags & 0b00000111)
+        let hasAutoUp   = (flags & 0b00001000) != 0
+        let hasAutoDown = (flags & 0b00010000) != 0
 
-    let rawHeight = UInt16(data[3]) | (UInt16(data[4]) << 8)
-    guard rawHeight != 0, rawHeight != 0xFFFF else { return nil }
+        return DeskCapabilities(
+            presetCount: presetCount,
+            hasAutoUp: hasAutoUp,
+            hasAutoDown: hasAutoDown
+        )
+    }
 
-    return Int(rawHeight) / 10
-}
+    /// Parse a preset height response to a 7F 89-8C query on characteristic 99fa0011.
+    ///
+    /// DPG response format: [status, length, slot, height_lo, height_hi, ...].
+    /// Height is a uint16 in 0.1 mm units at bytes [3:4] (little-endian).
+    /// Returns nil when data is too short, or when the preset is unset (0xFFFF).
+    public static func parsePresetHeight(_ data: Data) -> Int? {
+        guard data.count >= 5 else { return nil }
 
-/// Parse a desk offset response to the 7F 88 query on characteristic 99fa0011.
-///
-/// DPG response format: [status, length, offset_lo, offset_hi, ...].
-/// Offset is a uint16 in 0.1 mm units at bytes [2:3] (little-endian).
-/// Returns nil when data is too short or the offset is zero.
-public func parseDeskOffset(_ data: Data) -> Int? {
-    guard data.count >= 4 else { return nil }
+        let rawHeight = UInt16(data[3]) | (UInt16(data[4]) << 8)
+        guard rawHeight != 0, rawHeight != 0xFFFF else { return nil }
 
-    let rawOffset = UInt16(data[2]) | (UInt16(data[3]) << 8)
-    guard rawOffset != 0 else { return nil }
+        return Int(rawHeight) / 10
+    }
 
-    return Int(rawOffset) / 10
-}
+    /// Parse a desk offset response to the 7F 88 query on characteristic 99fa0011.
+    ///
+    /// DPG response format: [status, length, offset_lo, offset_hi, ...].
+    /// Offset is a uint16 in 0.1 mm units at bytes [2:3] (little-endian).
+    /// Returns nil when data is too short or the offset is zero.
+    public static func parseDeskOffset(_ data: Data) -> Int? {
+        guard data.count >= 4 else { return nil }
 
-// MARK: - Encoding
+        let rawOffset = UInt16(data[2]) | (UInt16(data[3]) << 8)
+        guard rawOffset != 0 else { return nil }
 
-/// Encode a target height in mm as a 2-byte little-endian uint16 (0.1 mm units)
-/// for writing to characteristic 99fa0031.
-///
-/// Rejects values outside the safe command range (600...1350 mm) and returns nil.
-public func encodeTargetHeight(mm: Int) -> Data? {
-    guard DeskLimits.safeCommandRange.contains(mm) else { return nil }
+        return Int(rawOffset) / 10
+    }
 
-    let rawValue = UInt16(mm * 10)
-    return Data([
-        UInt8(rawValue & 0xFF),
-        UInt8(rawValue >> 8)
-    ])
+    // MARK: - Encoding
+
+    /// Encode a target height in mm as a 2-byte little-endian uint16 (0.1 mm units)
+    /// for writing to characteristic 99fa0031.
+    ///
+    /// Rejects values outside the safe command range (0...6500 mm) and returns nil.
+    public static func encodeTargetHeight(mm: Int) -> Data? {
+        guard DeskLimits.safeCommandRange.contains(mm) else { return nil }
+
+        let rawValue = UInt16(mm * 10)
+        return Data([
+            UInt8(rawValue & 0xFF),
+            UInt8(rawValue >> 8)
+        ])
+    }
 }

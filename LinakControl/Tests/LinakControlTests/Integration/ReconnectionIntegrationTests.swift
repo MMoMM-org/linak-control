@@ -13,17 +13,7 @@ private let pairedDeskUUID = UUID()
 
 // MARK: - Test Factories
 
-private func makeTempConfigStore(pairedUUID: UUID? = nil) -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("ReconnectionIntegration-\(UUID().uuidString)")
-    let store = ConfigStore(directoryURL: tempDir)
-    if let uuid = pairedUUID {
-        var config = AppConfig.default
-        config.pairedDeskUUID = uuid.uuidString
-        try? store.save(config)
-    }
-    return store
-}
+// makeTempConfigStore is provided by TestHelpers.swift (with pairedUUID: parameter)
 
 private func makeManager(
     mock: MockBLEController,
@@ -56,18 +46,10 @@ private func makeConnectedManager(
     return manager
 }
 
-private func makeDPGStream(responses: [Data]) -> AsyncStream<Data> {
-    AsyncStream { continuation in
-        for response in responses { continuation.yield(response) }
-        continuation.finish()
-    }
-}
+// makeDPGStream is provided by TestHelpers.swift
 
 private func makeFiniteHeightStream(values: [Data]) -> AsyncStream<Data> {
-    AsyncStream { continuation in
-        for value in values { continuation.yield(value) }
-        continuation.finish()
-    }
+    makeDPGStream(responses: values)
 }
 
 // MARK: - Disconnect Triggers Reconnection with Backoff

@@ -6,15 +6,7 @@ import XCTest
 
 // MARK: - Helpers
 
-private func makeTempConfigStore(config: AppConfig? = nil) -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("FirstRunViewModelTests-\(UUID().uuidString)")
-    let store = ConfigStore(directoryURL: tempDir)
-    if let config {
-        try? store.save(config)
-    }
-    return store
-}
+// makeTempConfigStore is provided by TestHelpers.swift (with config: parameter)
 
 @MainActor
 private func makeViewModel(mock: MockBLEController, store: ConfigStore) -> (DeskManager, DeskViewModel) {
@@ -23,17 +15,7 @@ private func makeViewModel(mock: MockBLEController, store: ConfigStore) -> (Desk
     return (manager, viewModel)
 }
 
-/// Polls until the predicate returns true or the timeout elapses.
-private func waitFor(
-    timeout: TimeInterval = 1.0,
-    predicate: @escaping () async -> Bool
-) async {
-    let deadline = ContinuousClock.now.advanced(by: .seconds(timeout))
-    while ContinuousClock.now < deadline {
-        if await predicate() { return }
-        try? await Task.sleep(for: .milliseconds(20))
-    }
-}
+// waitFor is provided by TestHelpers.swift
 
 // MARK: - isFirstRun Detection
 

@@ -30,13 +30,7 @@ private enum LoginItemTestError: Error {
 
 // MARK: - Helpers
 
-private func makeTempConfigStore(config: AppConfig? = nil) -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("LoginItemManagerTests-\(UUID().uuidString)")
-    let store = ConfigStore(directoryURL: tempDir)
-    if let config { try? store.save(config) }
-    return store
-}
+// makeTempConfigStore is provided by TestHelpers.swift (with config: parameter)
 
 @MainActor
 private func makeViewModel(

@@ -14,48 +14,12 @@ import Darwin
 
 // MARK: - Shared Helpers
 
-private func makeTempConfigStore(tag: String = "Perf") -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("PerformanceTests-\(tag)-\(UUID().uuidString)")
-    return ConfigStore(directoryURL: tempDir)
-}
+// makeTempConfigStore, makeHeightPacket, makeDPGStream, and waitFor are provided by TestHelpers.swift
 
 private func makeTempSocketPath() -> String {
     FileManager.default.temporaryDirectory
         .appendingPathComponent("perf-ipc-\(UUID().uuidString).sock")
         .path
-}
-
-/// Encodes a BLE height notification packet (4 bytes, little-endian position and speed).
-private func makeHeightPacket(mm: Int, speedMMS: Int = 0) -> Data {
-    let rawPosition = UInt16(mm * 10)
-    let rawSpeed    = UInt16(bitPattern: Int16(clamping: speedMMS))
-    return Data([
-        UInt8(rawPosition & 0xFF), UInt8(rawPosition >> 8),
-        UInt8(rawSpeed    & 0xFF), UInt8(rawSpeed    >> 8),
-    ])
-}
-
-/// Builds a DPG handshake stream from the shared happy-path fixtures.
-private func makeDPGStream() -> AsyncStream<Data> {
-    AsyncStream { continuation in
-        for response in HandshakeFixtures.happyPathDPGResponses {
-            continuation.yield(response)
-        }
-        continuation.finish()
-    }
-}
-
-/// Waits until `predicate` returns true or `timeout` elapses.
-private func waitFor(
-    timeout: TimeInterval = 2.0,
-    predicate: @escaping () async -> Bool
-) async {
-    let deadline = ContinuousClock.now.advanced(by: .seconds(timeout))
-    while ContinuousClock.now < deadline {
-        if await predicate() { return }
-        try? await Task.sleep(for: .milliseconds(10))
-    }
 }
 
 /// Waits for the IPC server to accept connections, polling up to `timeout` seconds.
@@ -100,7 +64,7 @@ final class HeightUpdateLatencyTests: XCTestCase {
         let mock = MockBLEController()
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
         mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
-        mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream()
+        mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream(responses: HandshakeFixtures.happyPathDPGResponses)
         mock.mockNotificationStreams[DeskUUID.height] = heightStream
 
         let store = makeTempConfigStore(tag: "HeightLatency")
@@ -155,7 +119,7 @@ final class PresetMoveStartLatencyTests: XCTestCase {
         let mock = MockBLEController()
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
         mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
-        mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream()
+        mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream(responses: HandshakeFixtures.happyPathDPGResponses)
         mock.mockNotificationStreams[DeskUUID.height] = heightStream
 
         let store = makeTempConfigStore(tag: "PresetLatency")
@@ -201,7 +165,7 @@ final class StatePropagationThroughputTests: XCTestCase {
         let mock = MockBLEController()
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
         mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
-        mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream()
+        mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream(responses: HandshakeFixtures.happyPathDPGResponses)
         mock.mockNotificationStreams[DeskUUID.height] = heightStream
 
         let store = makeTempConfigStore(tag: "Throughput")

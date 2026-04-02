@@ -15,7 +15,7 @@ private func makeConnectedManager() async throws -> (DeskManager, MockBLEControl
     let mock = MockBLEController()
     mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
     mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
-    mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream()
+    mock.mockNotificationStreams[DeskUUID.dpg] = makeDefaultDPGStream()
     mock.mockNotificationStreams[DeskUUID.height] = makeFiniteHeightStream()
 
     let store = makeTempConfigStore()
@@ -24,13 +24,10 @@ private func makeConnectedManager() async throws -> (DeskManager, MockBLEControl
     return (manager, mock)
 }
 
-private func makeDPGStream() -> AsyncStream<Data> {
-    AsyncStream { continuation in
-        for response in HandshakeFixtures.happyPathDPGResponses {
-            continuation.yield(response)
-        }
-        continuation.finish()
-    }
+// makeDPGStream is provided by TestHelpers.swift (call with responses: parameter)
+
+private func makeDefaultDPGStream() -> AsyncStream<Data> {
+    makeDPGStream(responses: HandshakeFixtures.happyPathDPGResponses)
 }
 
 private func makeFiniteHeightStream() -> AsyncStream<Data> {
@@ -40,11 +37,7 @@ private func makeFiniteHeightStream() -> AsyncStream<Data> {
     }
 }
 
-private func makeTempConfigStore() -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("DeskManagerMovementTests-\(UUID().uuidString)")
-    return ConfigStore(directoryURL: tempDir)
-}
+// makeTempConfigStore is provided by TestHelpers.swift
 
 // MARK: - Manual Mode Tests
 

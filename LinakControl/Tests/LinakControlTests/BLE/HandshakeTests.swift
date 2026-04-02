@@ -7,14 +7,7 @@ import CoreBluetooth
 
 // MARK: - Helpers
 
-private func makeDPGStream(responses: [Data]) -> AsyncStream<Data> {
-    AsyncStream { continuation in
-        for response in responses {
-            continuation.yield(response)
-        }
-        continuation.finish()
-    }
-}
+// makeDPGStream is provided by TestHelpers.swift
 
 private func makeHeightStream(values: [Data] = []) -> AsyncStream<Data> {
     AsyncStream { continuation in

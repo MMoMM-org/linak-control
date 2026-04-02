@@ -46,7 +46,7 @@ extension DeskManager {
         try await bleController.write(data: readCommand, to: DeskUUID.dpg, type: .withResponse)
         let readResponse = try await buffer.next()
 
-        let confirmedHeight = parsePresetHeight(readResponse)
+        let confirmedHeight = DeskProtocol.parsePresetHeight(readResponse)
         if confirmedHeight == nil {
             print("[DeskManager] savePreset: re-read returned no height for preset \(index); accepting firmware value")
         }

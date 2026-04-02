@@ -24,14 +24,7 @@ private func configureHappyPath(
     mock.mockNotificationStreams[DeskUUID.height] = makeFiniteHeightStream(values: heightValues)
 }
 
-private func makeDPGStream(responses: [Data]) -> AsyncStream<Data> {
-    AsyncStream { continuation in
-        for response in responses {
-            continuation.yield(response)
-        }
-        continuation.finish()
-    }
-}
+// makeDPGStream is provided by TestHelpers.swift
 
 private func makeFiniteHeightStream(values: [Data]) -> AsyncStream<Data> {
     AsyncStream { continuation in
@@ -42,28 +35,9 @@ private func makeFiniteHeightStream(values: [Data]) -> AsyncStream<Data> {
     }
 }
 
-/// Creates a height notification Data packet for the given height in mm.
-///
-/// Matches the layout expected by `parseHeightNotification(_:)`:
-/// - Bytes [0:1]: position as little-endian uint16 in 0.1 mm units
-/// - Bytes [2:3]: speed as little-endian int16 raw units
-private func makeHeightPacket(mm: Int, speedMMS: Int = 0) -> Data {
-    let rawPosition = UInt16(mm * 10)
-    let rawSpeed = UInt16(bitPattern: Int16(clamping: speedMMS))
-    return Data([
-        UInt8(rawPosition & 0xFF),
-        UInt8(rawPosition >> 8),
-        UInt8(rawSpeed & 0xFF),
-        UInt8(rawSpeed >> 8)
-    ])
-}
+// makeHeightPacket is provided by TestHelpers.swift
 
-/// Builds a ConfigStore backed by a temp directory so tests don't touch disk.
-private func makeTempConfigStore() -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("DeskManagerTests-\(UUID().uuidString)")
-    return ConfigStore(directoryURL: tempDir)
-}
+// makeTempConfigStore is provided by TestHelpers.swift
 
 // MARK: - Initial State Tests
 

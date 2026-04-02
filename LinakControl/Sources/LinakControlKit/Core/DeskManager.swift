@@ -250,7 +250,7 @@ extension DeskManager {
     private static let speedThreshold = 5
 
     private func handleHeightNotification(_ data: Data) {
-        guard let (heightMM, speedMMS) = parseHeightNotification(data) else { return }
+        guard let (heightMM, speedMMS) = DeskProtocol.parseHeightNotification(data) else { return }
         state.heightMM = heightMM
         state.speedMMS = speedMMS
         let isActuallyMoving = abs(speedMMS) >= Self.speedThreshold
@@ -291,13 +291,9 @@ extension DeskManager {
 
     /// Returns the configured label for a preset slot (1-based index).
     private func presetLabel(index: Int, config: AppConfig) -> String? {
-        switch index {
-        case 1: return config.preset1Label
-        case 2: return config.preset2Label
-        case 3: return config.preset3Label
-        case 4: return config.preset4Label
-        default: return nil
-        }
+        let arrayIndex = index - 1
+        guard arrayIndex >= 0 && arrayIndex < config.presetLabels.count else { return nil }
+        return config.presetLabels[arrayIndex]
     }
 
     /// Throws `DeskError.notConnected` unless the desk is currently connected.

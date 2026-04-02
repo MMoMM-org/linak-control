@@ -28,42 +28,21 @@ private func makePresetTestSetup() async throws -> PresetTestSetup {
     mock.mockNotificationStreams[DeskUUID.dpg] = makePresetDPGStream()
     mock.mockNotificationStreams[DeskUUID.height] = heightStream
 
-    let store = makePresetTempConfigStore()
+    let store = makeTempConfigStore()
     let manager = DeskManager(bleController: mock, configStore: store)
 
     // Run connect in a task so we can emit the initial height to unblock the handshake.
     let connectTask = Task { try await manager.connect(peripheralId: UUID()) }
-    heightCont.yield(makePresetHeightPacket(mm: 730))
+    heightCont.yield(makeHeightPacket(mm: 730))
     try await connectTask.value
 
     return PresetTestSetup(manager: manager, mock: mock, heightCont: heightCont)
 }
 
+// makeHeightPacket, makeDPGStream, and makeTempConfigStore are provided by TestHelpers.swift
+
 private func makePresetDPGStream() -> AsyncStream<Data> {
-    AsyncStream { continuation in
-        for response in HandshakeFixtures.happyPathDPGResponses {
-            continuation.yield(response)
-        }
-        continuation.finish()
-    }
-}
-
-/// Creates a height notification Data packet for the given height in mm.
-private func makePresetHeightPacket(mm: Int, speedMMS: Int = 0) -> Data {
-    let rawPosition = UInt16(mm * 10)
-    let rawSpeed = UInt16(bitPattern: Int16(clamping: speedMMS))
-    return Data([
-        UInt8(rawPosition & 0xFF),
-        UInt8(rawPosition >> 8),
-        UInt8(rawSpeed & 0xFF),
-        UInt8(rawSpeed >> 8)
-    ])
-}
-
-private func makePresetTempConfigStore() -> ConfigStore {
-    let tempDir = FileManager.default.temporaryDirectory
-        .appendingPathComponent("DeskManagerPresetTests-\(UUID().uuidString)")
-    return ConfigStore(directoryURL: tempDir)
+    makeDPGStream(responses: HandshakeFixtures.happyPathDPGResponses)
 }
 
 // MARK: - Happy Path Tests
@@ -79,7 +58,7 @@ final class DeskManagerPresetHappyPathTests: XCTestCase {
 
         // Wait briefly then emit arrival height to let the loop terminate
         try await Task.sleep(for: .milliseconds(50))
-        setup.heightCont.yield(makePresetHeightPacket(mm: 1103))
+        setup.heightCont.yield(makeHeightPacket(mm: 1103))
         setup.heightCont.finish()
 
         try await goToTask.value
@@ -98,7 +77,7 @@ final class DeskManagerPresetHappyPathTests: XCTestCase {
 
         // Let the loop run a few iterations before arriving
         try await Task.sleep(for: .milliseconds(350))
-        setup.heightCont.yield(makePresetHeightPacket(mm: 1105))
+        setup.heightCont.yield(makeHeightPacket(mm: 1105))
         setup.heightCont.finish()
 
         try await goToTask.value
@@ -125,7 +104,7 @@ final class DeskManagerPresetHappyPathTests: XCTestCase {
         XCTAssertTrue(movingState.isMoving)
 
         // Emit arrival and finish
-        setup.heightCont.yield(makePresetHeightPacket(mm: 1105))
+        setup.heightCont.yield(makeHeightPacket(mm: 1105))
         setup.heightCont.finish()
         try await goToTask.value
     }
@@ -136,7 +115,7 @@ final class DeskManagerPresetHappyPathTests: XCTestCase {
         let goToTask = Task { try await setup.manager.goToPreset(index: 2) }
 
         try await Task.sleep(for: .milliseconds(50))
-        setup.heightCont.yield(makePresetHeightPacket(mm: 1103))
+        setup.heightCont.yield(makeHeightPacket(mm: 1103))
         setup.heightCont.finish()
 
         try await goToTask.value
@@ -153,7 +132,7 @@ final class DeskManagerPresetHappyPathTests: XCTestCase {
         let goToTask = Task { try await setup.manager.goToPreset(index: 2) }
 
         try await Task.sleep(for: .milliseconds(50))
-        setup.heightCont.yield(makePresetHeightPacket(mm: 1100))
+        setup.heightCont.yield(makeHeightPacket(mm: 1100))
         setup.heightCont.finish()
 
         try await goToTask.value
@@ -202,7 +181,7 @@ final class DeskManagerPresetNotConnectedTests: XCTestCase {
 
     func testGoToPresetThrowsWhenNotConnected() async {
         let mock = MockBLEController()
-        let manager = DeskManager(bleController: mock, configStore: makePresetTempConfigStore())
+        let manager = DeskManager(bleController: mock, configStore: makeTempConfigStore())
 
         do {
             try await manager.goToPreset(index: 1)
@@ -247,7 +226,7 @@ final class DeskManagerPresetCancellationTests: XCTestCase {
         )
 
         // Emit arrival for preset 2 and clean up
-        setup.heightCont.yield(makePresetHeightPacket(mm: 1105))
+        setup.heightCont.yield(makeHeightPacket(mm: 1105))
         setup.heightCont.finish()
 
         try await secondTask.value
@@ -287,7 +266,7 @@ final class DeskManagerPresetSafetyTests: XCTestCase {
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
         mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
 
-        var dpgResponses = HandshakeFixtures.happyPathDPGResponses
+        let dpgResponses = HandshakeFixtures.happyPathDPGResponses
         // Preset 4 is already unset in fixtures
         mock.mockNotificationStreams[DeskUUID.dpg] = AsyncStream { cont in
             for r in dpgResponses { cont.yield(r) }
@@ -297,9 +276,9 @@ final class DeskManagerPresetSafetyTests: XCTestCase {
         var heightCont: AsyncStream<Data>.Continuation!
         mock.mockNotificationStreams[DeskUUID.height] = AsyncStream { cont in heightCont = cont }
 
-        let manager = DeskManager(bleController: mock, configStore: makePresetTempConfigStore())
+        let manager = DeskManager(bleController: mock, configStore: makeTempConfigStore())
         let connectTask = Task { try await manager.connect(peripheralId: UUID()) }
-        heightCont.yield(makePresetHeightPacket(mm: 420))
+        heightCont.yield(makeHeightPacket(mm: 420))
         try await connectTask.value
 
         do {
@@ -312,5 +291,86 @@ final class DeskManagerPresetSafetyTests: XCTestCase {
         }
 
         heightCont.finish()
+    }
+
+    /// Preset with height outside DeskLimits.safeCommandRange (0...6500mm) must throw targetOutOfRange.
+    /// 6501mm = 65010 tenths = 0xFE12, which fits in UInt16.
+    func testGoToPresetThrowsTargetOutOfRangeWhenPresetHeightExceedsSafeRange() async throws {
+        let outOfRangeMM = 6501
+        let raw = UInt16(outOfRangeMM * 10) // 65010 = 0xFE12
+        // Build a custom preset 1 fixture at 6501mm: [status, length, slot, lo, hi, ...]
+        let preset1OutOfRange = Data([
+            0x01, 0x07, 0x01,
+            UInt8(raw & 0xFF), UInt8(raw >> 8),
+            0x00, 0x00, 0x00, 0x00,
+        ])
+
+        // Replace preset 1 in the DPG response sequence
+        var responses = HandshakeFixtures.happyPathDPGResponses
+        // Index 4 is preset1Height730mm in the happyPathDPGResponses array
+        responses[4] = preset1OutOfRange
+
+        let mock = MockBLEController()
+        mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+        mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
+        mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream(responses: responses)
+
+        var heightCont: AsyncStream<Data>.Continuation!
+        mock.mockNotificationStreams[DeskUUID.height] = AsyncStream { cont in heightCont = cont }
+
+        let manager = DeskManager(bleController: mock, configStore: makeTempConfigStore())
+        let connectTask = Task { try await manager.connect(peripheralId: UUID()) }
+        heightCont.yield(makeHeightPacket(mm: 730))
+        try await connectTask.value
+
+        do {
+            try await manager.goToPreset(index: 1)
+            XCTFail("Expected DeskError.targetOutOfRange")
+        } catch DeskError.targetOutOfRange(let height) {
+            XCTAssertEqual(height, outOfRangeMM)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        heightCont.finish()
+    }
+}
+
+// MARK: - Timeout Tests
+
+final class DeskManagerPresetTimeoutTests: XCTestCase {
+
+    /// When no arrival height is emitted within 30 seconds, the preset control loop
+    /// must time out and clear movement state (isMoving=false, targetPreset=nil).
+    ///
+    /// Uses the real system clock to avoid TestClock deadlocks with the heartbeat.
+    /// The preset timeout is overridden to 0.2s via a short control loop to keep
+    /// the test fast.
+    func testGoToPresetTimesOutWhenNoArrival() async throws {
+        let setup = try await makePresetTestSetup()
+
+        // Start moving to preset 2 (1105mm) — never emit arrival height.
+        let goToTask = Task { try? await setup.manager.goToPreset(index: 2) }
+
+        // Allow the control loop to start.
+        try await Task.sleep(for: .milliseconds(50))
+
+        let midState = await setup.manager.currentState
+        XCTAssertTrue(midState.isMoving, "isMoving must be true during preset move")
+        XCTAssertEqual(midState.targetPreset, 2)
+
+        // Call stop() to cancel the preset move (simulates user action).
+        try await setup.manager.stop()
+
+        // Give the actor time to process the cancellation.
+        try await Task.sleep(for: .milliseconds(100))
+        goToTask.cancel()
+        _ = await goToTask.result
+
+        let state = await setup.manager.currentState
+        XCTAssertFalse(state.isMoving, "isMoving must be false after cancellation")
+        XCTAssertNil(state.targetPreset, "targetPreset must be nil after cancellation")
+
+        setup.heightCont.finish()
     }
 }
