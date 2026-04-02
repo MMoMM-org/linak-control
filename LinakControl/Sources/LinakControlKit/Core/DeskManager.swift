@@ -143,7 +143,7 @@ public actor DeskManager {
     public func stop() async throws {
         try requireConnected()
         await cancelMovementTask()
-        cancelPresetMoveTask()
+        await cancelPresetMoveTask()
         try await writeStopCommand()
         updateState {
             $0.isMoving = false

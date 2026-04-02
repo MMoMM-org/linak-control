@@ -33,9 +33,16 @@ public enum FileLog {
     private static var logURL: URL? = {
         let dir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Logs/LinakControl", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(
+            at: dir, withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
         return dir.appendingPathComponent("debug.log")
     }()
+
+    /// Persistent file handle — opened once, reused for all writes.
+    /// Avoids file-descriptor churn at ~10Hz during desk movement.
+    private static var fileHandle: FileHandle?
 
     /// Write a single log line. No-op in release builds.
     public static func debug(_ message: @autoclosure () -> String, category: String = "general") {
@@ -46,18 +53,14 @@ public enum FileLog {
 
         queue.async {
             guard let url = logURL else { return }
-            if let handle = try? FileHandle(forWritingTo: url) {
-                // Truncate if over limit
-                let size = handle.seekToEndOfFile()
-                if size > maxBytes {
-                    handle.truncateFile(atOffset: 0)
-                    handle.seek(toFileOffset: 0)
-                }
-                handle.write(Data(line.utf8))
-                handle.closeFile()
-            } else {
-                try? Data(line.utf8).write(to: url, options: .atomic)
+            let handle = openHandleIfNeeded(url: url)
+            guard let handle else { return }
+            let size = handle.seekToEndOfFile()
+            if size > maxBytes {
+                handle.truncateFile(atOffset: 0)
+                handle.seek(toFileOffset: 0)
             }
+            handle.write(Data(line.utf8))
         }
         #endif
     }
@@ -67,8 +70,24 @@ public enum FileLog {
         #if DEBUG
         queue.async {
             guard let url = logURL else { return }
+            fileHandle?.closeFile()
+            fileHandle = nil
             try? Data().write(to: url, options: .atomic)
         }
         #endif
+    }
+
+    /// Opens or returns the existing persistent file handle.
+    /// Creates the file with 0600 permissions if it doesn't exist.
+    private static func openHandleIfNeeded(url: URL) -> FileHandle? {
+        if let handle = fileHandle { return handle }
+        if !FileManager.default.fileExists(atPath: url.path) {
+            FileManager.default.createFile(
+                atPath: url.path, contents: nil,
+                attributes: [.posixPermissions: 0o600]
+            )
+        }
+        fileHandle = try? FileHandle(forWritingTo: url)
+        return fileHandle
     }
 }

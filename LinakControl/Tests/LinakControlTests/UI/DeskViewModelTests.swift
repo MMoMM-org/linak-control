@@ -15,6 +15,7 @@ private func makeTempConfigStore() -> ConfigStore {
 private func makeHappyPathMock() -> MockBLEController {
     let mock = MockBLEController()
     mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+    mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
     mock.mockNotificationStreams[DeskUUID.dpg] = finiteStream(HandshakeFixtures.happyPathDPGResponses)
     mock.mockNotificationStreams[DeskUUID.height] = finiteStream([HandshakeFixtures.heightNotification730mm])
     return mock

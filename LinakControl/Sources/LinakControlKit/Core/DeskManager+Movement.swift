@@ -22,10 +22,8 @@ extension DeskManager {
     func startMovement(_ direction: MoveDirection, mode: RunMode) async throws {
         FileLog.debug("startMovement(\(direction), mode: \(mode))", category: "core")
         try requireConnected()
+        try await recordUserAction()
         await cancelMovementTask()
-
-        // Wake the desk before sending movement commands.
-        try? await bleController.write(data: DeskCommand.wakeUp, to: DeskUUID.command, type: .withoutResponse)
 
         updateState {
             $0.isMoving = true
@@ -41,9 +39,10 @@ extension DeskManager {
         }
     }
 
-    /// Cancels the active movement task and waits for it to finish.
+    /// Cancels the active movement task and waits for it to drain.
     func cancelMovementTask() async {
         movementTask?.cancel()
+        await movementTask?.value
         movementTask = nil
     }
 

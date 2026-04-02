@@ -25,15 +25,13 @@ extension DeskManager {
     func executeGoToPreset(index: Int) async throws {
         FileLog.debug("executeGoToPreset(\(index))", category: "core")
         try requireConnected()
+        try await recordUserAction()
 
         let targetMM = try resolvePresetHeight(index)
         try guardHeightInRange(targetMM)
 
-        cancelPresetMoveTask()
+        await cancelPresetMoveTask()
         await cancelMovementTask()
-
-        // Wake the desk before sending preset commands.
-        try? await bleController.write(data: DeskCommand.wakeUp, to: DeskUUID.command, type: .withoutResponse)
 
         updateState {
             $0.targetPreset = index
@@ -44,9 +42,10 @@ extension DeskManager {
         startPresetControlLoop(targetMM: targetMM)
     }
 
-    /// Cancels the active preset move task without awaiting completion.
-    func cancelPresetMoveTask() {
+    /// Cancels the active preset move task and waits for it to drain.
+    func cancelPresetMoveTask() async {
         presetMoveTask?.cancel()
+        await presetMoveTask?.value
         presetMoveTask = nil
     }
 

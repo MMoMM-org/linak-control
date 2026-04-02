@@ -14,6 +14,7 @@ import CoreBluetooth
 private func makeConnectedManager() async throws -> (DeskManager, MockBLEController) {
     let mock = MockBLEController()
     mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+    mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
     mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream()
     mock.mockNotificationStreams[DeskUUID.height] = makeFiniteHeightStream()
 
@@ -196,7 +197,7 @@ final class DeskManagerStopTests: XCTestCase {
 
 final class DeskManagerAutoUpTests: XCTestCase {
 
-    func testAutoUpSendsWakeUpThenPreflightBeforeMoving() async throws {
+    func testAutoUpSendsPreflightBeforeMoving() async throws {
         let (manager, mock) = try await makeConnectedManager()
         let priorCount = mock.writtenData.count
 
@@ -206,9 +207,8 @@ final class DeskManagerAutoUpTests: XCTestCase {
 
         let postWrites = Array(mock.writtenData.dropFirst(priorCount))
             .filter { $0.characteristic == DeskUUID.command }
-        XCTAssertGreaterThanOrEqual(postWrites.count, 2, "Need at least wake-up + preflight")
-        XCTAssertEqual(postWrites[0].data, DeskCommand.wakeUp, "First command must be wake-up")
-        XCTAssertEqual(postWrites[1].data, DeskCommand.preflight, "Second command must be preflight")
+        XCTAssertGreaterThanOrEqual(postWrites.count, 1, "Need at least preflight")
+        XCTAssertEqual(postWrites[0].data, DeskCommand.preflight, "First command must be preflight")
     }
 
     func testAutoUpSendsMoveToMaxHeightRepeatedly() async throws {
@@ -231,7 +231,7 @@ final class DeskManagerAutoUpTests: XCTestCase {
 
 final class DeskManagerAutoDownTests: XCTestCase {
 
-    func testAutoDownSendsWakeUpThenPreflightBeforeMoving() async throws {
+    func testAutoDownSendsPreflightBeforeMoving() async throws {
         let (manager, mock) = try await makeConnectedManager()
         let priorCount = mock.writtenData.count
 
@@ -241,9 +241,8 @@ final class DeskManagerAutoDownTests: XCTestCase {
 
         let postWrites = Array(mock.writtenData.dropFirst(priorCount))
             .filter { $0.characteristic == DeskUUID.command }
-        XCTAssertGreaterThanOrEqual(postWrites.count, 2, "Need at least wake-up + preflight")
-        XCTAssertEqual(postWrites[0].data, DeskCommand.wakeUp, "First command must be wake-up")
-        XCTAssertEqual(postWrites[1].data, DeskCommand.preflight, "Second command must be preflight")
+        XCTAssertGreaterThanOrEqual(postWrites.count, 1, "Need at least preflight")
+        XCTAssertEqual(postWrites[0].data, DeskCommand.preflight, "First command must be preflight")
     }
 
     func testAutoDownSendsMoveToMinHeightRepeatedly() async throws {

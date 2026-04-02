@@ -99,6 +99,7 @@ final class HeightUpdateLatencyTests: XCTestCase {
 
         let mock = MockBLEController()
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+        mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
         mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream()
         mock.mockNotificationStreams[DeskUUID.height] = heightStream
 
@@ -153,6 +154,7 @@ final class PresetMoveStartLatencyTests: XCTestCase {
 
         let mock = MockBLEController()
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+        mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
         mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream()
         mock.mockNotificationStreams[DeskUUID.height] = heightStream
 
@@ -198,6 +200,7 @@ final class StatePropagationThroughputTests: XCTestCase {
 
         let mock = MockBLEController()
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+        mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
         mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream()
         mock.mockNotificationStreams[DeskUUID.height] = heightStream
 

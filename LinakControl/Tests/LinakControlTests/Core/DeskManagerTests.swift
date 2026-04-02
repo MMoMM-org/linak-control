@@ -17,6 +17,7 @@ private func configureHappyPath(
     heightValues: [Data] = [HandshakeFixtures.heightNotification730mm]
 ) {
     mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+    mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
     mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream(
         responses: HandshakeFixtures.happyPathDPGResponses
     )
@@ -255,6 +256,7 @@ final class DeskManagerHeightNotificationTests: XCTestCase {
         var heightCont: AsyncStream<Data>.Continuation!
         let heightStream = AsyncStream<Data> { cont in heightCont = cont }
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+        mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
         mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream(
             responses: HandshakeFixtures.happyPathDPGResponses
         )
@@ -284,6 +286,7 @@ final class DeskManagerHeightNotificationTests: XCTestCase {
         var heightCont: AsyncStream<Data>.Continuation!
         let heightStream = AsyncStream<Data> { cont in heightCont = cont }
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+        mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
         mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream(
             responses: HandshakeFixtures.happyPathDPGResponses
         )
@@ -312,6 +315,7 @@ final class DeskManagerHeightNotificationTests: XCTestCase {
         var heightCont: AsyncStream<Data>.Continuation!
         let heightStream = AsyncStream<Data> { cont in heightCont = cont }
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+        mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
         mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream(
             responses: HandshakeFixtures.happyPathDPGResponses
         )
@@ -340,6 +344,7 @@ final class DeskManagerHeightNotificationTests: XCTestCase {
         var heightCont: AsyncStream<Data>.Continuation!
         let heightStream = AsyncStream<Data> { cont in heightCont = cont }
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+        mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
         mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream(
             responses: HandshakeFixtures.happyPathDPGResponses
         )

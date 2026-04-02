@@ -75,6 +75,10 @@ public final class BLEController: NSObject, BLEControllerProtocol, @unchecked Se
                     withServices: [DeskUUID.controlService],
                     options: nil
                 )
+                // Auto-stop scan after 15 seconds to conserve radio/battery.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in
+                    self?.stopScan()
+                }
             }
         }
     }
@@ -161,7 +165,12 @@ public final class BLEController: NSObject, BLEControllerProtocol, @unchecked Se
                 FileLog.debug("write: [\(hex)] to \(characteristicUUID.uuidString) type=\(typeStr) props=\(props.rawValue)", category: "ble")
 
                 if type == .withResponse {
-                    writeContinuations[characteristicUUID] = continuation
+                    // Reject if a write is already in flight for this UUID.
+                    if self.writeContinuations[characteristicUUID] != nil {
+                        continuation.resume(throwing: BLEError.notConnected)
+                        return
+                    }
+                    self.writeContinuations[characteristicUUID] = continuation
                 } else {
                     // withoutResponse: fire-and-forget; resolve immediately
                     continuation.resume()

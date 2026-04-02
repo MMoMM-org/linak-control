@@ -24,6 +24,7 @@ private func makePresetTestSetup() async throws -> PresetTestSetup {
 
     let mock = MockBLEController()
     mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+    mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
     mock.mockNotificationStreams[DeskUUID.dpg] = makePresetDPGStream()
     mock.mockNotificationStreams[DeskUUID.height] = heightStream
 
@@ -85,9 +86,8 @@ final class DeskManagerPresetHappyPathTests: XCTestCase {
 
         let postWrites = Array(setup.mock.writtenData.dropFirst(priorCount))
             .filter { $0.characteristic == DeskUUID.command }
-        XCTAssertGreaterThanOrEqual(postWrites.count, 2, "Need at least wake-up + preflight")
-        XCTAssertEqual(postWrites[0].data, DeskCommand.wakeUp, "First must be wake-up")
-        XCTAssertEqual(postWrites[1].data, DeskCommand.preflight, "Second must be preflight")
+        XCTAssertGreaterThanOrEqual(postWrites.count, 1, "Need at least preflight")
+        XCTAssertEqual(postWrites[0].data, DeskCommand.preflight, "First must be preflight")
     }
 
     func testGoToPresetSendsMoveToTargetRepeatedly() async throws {
@@ -285,6 +285,7 @@ final class DeskManagerPresetSafetyTests: XCTestCase {
     func testGoToPresetWithUnsetPresetThrowsPresetNotSet() async throws {
         let mock = MockBLEController()
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+        mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
 
         var dpgResponses = HandshakeFixtures.happyPathDPGResponses
         // Preset 4 is already unset in fixtures

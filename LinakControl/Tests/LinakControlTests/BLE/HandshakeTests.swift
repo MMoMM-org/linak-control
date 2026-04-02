@@ -32,6 +32,9 @@ private func configureMock(
     outputMask: Data = HandshakeFixtures.validOutputMask
 ) {
     mock.mockReadResponses[DeskUUID.outputMask] = outputMask
+    if let firstHeight = heightValues.first {
+        mock.mockReadResponses[DeskUUID.height] = firstHeight
+    }
     mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream(responses: dpgResponses)
     mock.mockNotificationStreams[DeskUUID.height] = makeHeightStream(values: heightValues)
 }

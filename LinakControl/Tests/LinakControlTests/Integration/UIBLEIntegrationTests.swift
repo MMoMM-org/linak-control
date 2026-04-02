@@ -28,6 +28,7 @@ private func makeConnectedHarness() async throws -> UIBLEHarness {
 
     let mock = MockBLEController()
     mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+    mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
     mock.mockNotificationStreams[DeskUUID.dpg] = makeHarnessDPGStream()
     mock.mockNotificationStreams[DeskUUID.height] = heightStream
 
@@ -113,11 +114,10 @@ final class UIBLEPresetSwitchTests: XCTestCase {
 
         let newWrites = Array(harness.mock.writtenData.dropFirst(priorWriteCount))
 
-        // Wake-up then preflight must be the first two command writes.
+        // Preflight must be the first command write.
         let cmdWrites = newWrites.filter { $0.characteristic == DeskUUID.command }
-        XCTAssertGreaterThanOrEqual(cmdWrites.count, 2, "Need wake-up + preflight")
-        XCTAssertEqual(cmdWrites[0].data, DeskCommand.wakeUp, "First must be wake-up")
-        XCTAssertEqual(cmdWrites[1].data, DeskCommand.preflight, "Second must be preflight")
+        XCTAssertGreaterThanOrEqual(cmdWrites.count, 1, "Need at least preflight")
+        XCTAssertEqual(cmdWrites[0].data, DeskCommand.preflight, "First must be preflight")
 
         // At least one heartbeat targeting 1105mm must have been sent.
         let expectedTarget = DeskCommand.moveTo(tenthsOfMm: UInt16(1105 * 10))
@@ -183,6 +183,7 @@ final class UIBLEConnectionStateTests: XCTestCase {
 
         let mock = MockBLEController()
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+        mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
         mock.mockNotificationStreams[DeskUUID.dpg] = makeHarnessDPGStream()
         mock.mockNotificationStreams[DeskUUID.height] = heightStream
 

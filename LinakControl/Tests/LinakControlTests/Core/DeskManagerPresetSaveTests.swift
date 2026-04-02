@@ -18,6 +18,7 @@ private func makeConnectedManagerForSave(
 ) async throws -> (DeskManager, MockBLEController) {
     let mock = MockBLEController()
     mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+    mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
     mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream(
         responses: HandshakeFixtures.happyPathDPGResponses
     )

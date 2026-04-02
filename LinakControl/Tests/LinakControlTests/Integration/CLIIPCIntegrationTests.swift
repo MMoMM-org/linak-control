@@ -36,6 +36,7 @@ private func makeDisconnectedManager(configStore: ConfigStore) -> DeskManager {
 private func makeConnectedManager(configStore: ConfigStore) async throws -> DeskManager {
     let mock = MockBLEController()
     mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+    mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
     mock.mockNotificationStreams[DeskUUID.dpg] = AsyncStream { continuation in
         for response in HandshakeFixtures.happyPathDPGResponses {
             continuation.yield(response)
@@ -138,6 +139,7 @@ final class CLIPresetCommandIntegrationTests: XCTestCase {
 
         let mock = MockBLEController()
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
+        mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
         mock.mockNotificationStreams[DeskUUID.dpg] = AsyncStream { continuation in
             for response in HandshakeFixtures.happyPathDPGResponses {
                 continuation.yield(response)

@@ -71,16 +71,12 @@ public func performHandshake(using bleController: any BLEControllerProtocol) asy
     try await enableNotifications(using: bleController)
     FileLog.debug("handshake: step 1 -- notifications enabled", category: "handshake")
 
-    // Capture first height notification in background before issuing DPG queries
-    let heightTask = Task<Int?, Never> { await firstHeightNotification(from: bleController) }
-
     // Step 2: Validate output mask
     FileLog.debug("handshake: step 2 -- reading output mask", category: "handshake")
     let mask = try await bleController.read(DeskUUID.outputMask)
     FileLog.debug("handshake: step 2 -- mask=\(mask.map { String(format: "%02x", $0) }.joined())", category: "handshake")
     guard mask == Data([0x01]) else {
         FileLog.debug("handshake: ABORT -- unexpected mask value", category: "handshake")
-        heightTask.cancel()
         throw DeskError.unexpectedMaskValue(mask)
     }
 
@@ -101,15 +97,14 @@ public func performHandshake(using bleController: any BLEControllerProtocol) asy
     let deskOffsetMM = parseDeskOffset(from: dpgResponses)
     let presetHeights = parsePresetHeights(from: dpgResponses)
 
-    // Prefer height from notification; fall back to direct characteristic read
-    // when the desk is stationary and sends no notifications.
-    var currentHeight = await heightTask.value
-    if currentHeight == nil {
-        FileLog.debug("handshake: no height notification, reading characteristic directly", category: "handshake")
-        if let data = try? await bleController.read(DeskUUID.height),
-           let (h, _) = parseHeightNotification(data) {
-            currentHeight = h
-        }
+    // Read current height directly from the characteristic. This avoids
+    // fighting with the height notification listener for the stream and
+    // eliminates a 3-second timeout wait on stationary desks.
+    var currentHeight: Int?
+    FileLog.debug("handshake: step 5 -- reading current height", category: "handshake")
+    if let data = try? await bleController.read(DeskUUID.height),
+       let (h, _) = parseHeightNotification(data) {
+        currentHeight = h
     }
 
     FileLog.debug("handshake: DONE -- height=\(currentHeight.map(String.init) ?? "nil") offset=\(deskOffsetMM.map(String.init) ?? "nil") presets=\(presetHeights)", category: "handshake")
@@ -130,28 +125,6 @@ private func enableNotifications(using bleController: any BLEControllerProtocol)
     try await bleController.setNotifyValue(true, for: DeskUUID.height)
 }
 
-private func firstHeightNotification(from bleController: any BLEControllerProtocol) async -> Int? {
-    // Race the height stream against a 3-second timeout. The desk may not send
-    // a height notification until it moves, so we must not block the handshake.
-    await withTaskGroup(of: Int?.self) { group in
-        group.addTask {
-            for await data in bleController.notifications(for: DeskUUID.height) {
-                if let (heightMM, _) = parseHeightNotification(data) {
-                    return heightMM
-                }
-            }
-            return nil
-        }
-        group.addTask {
-            try? await Task.sleep(for: .seconds(3))
-            return nil
-        }
-        // First to finish wins; cancel the other.
-        let result = await group.next() ?? nil
-        group.cancelAll()
-        return result
-    }
-}
 
 /// Reads the USER_ID from the desk, ensures byte 0 is 0x01, and writes it back
 /// to activate the DPG query session. Without this step the desk returns 0x0B
