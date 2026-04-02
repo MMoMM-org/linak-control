@@ -162,8 +162,6 @@ public final class MenuBarController: NSObject {
             return "Scanning…"
         case .disconnected:
             return "Not Connected"
-        case .busy:
-            return "Desk Busy"
         }
     }
 

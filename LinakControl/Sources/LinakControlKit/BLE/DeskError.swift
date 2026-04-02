@@ -23,6 +23,9 @@ public enum DeskError: Error, Sendable {
     /// The target height in mm is outside the safe command range (600...1350 mm).
     case targetOutOfRange(Int)
 
+    /// A DPG response could not be parsed into the expected format.
+    case invalidResponse
+
     /// The desk did not respond to wake-up commands after the maximum number of retries.
     case wakeUpFailed
 }

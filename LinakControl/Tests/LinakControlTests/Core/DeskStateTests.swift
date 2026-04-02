@@ -37,16 +37,16 @@ final class DeskStateTests: XCTestCase {
 
     // MARK: - ConnectionState Cases
 
-    func testConnectionStateHasAllFiveCases() {
+    func testConnectionStateHasAllFourCases() {
         // Exhaustive switch ensures the compiler catches any missing case
-        let cases: [ConnectionState] = [.disconnected, .scanning, .connecting, .connected, .busy]
+        let cases: [ConnectionState] = [.disconnected, .scanning, .connecting, .connected]
         for state in cases {
             switch state {
-            case .disconnected, .scanning, .connecting, .connected, .busy:
+            case .disconnected, .scanning, .connecting, .connected:
                 break
             }
         }
-        XCTAssertEqual(cases.count, 5)
+        XCTAssertEqual(cases.count, 4)
     }
 
     // MARK: - activePreset — SDD Traced Walkthrough

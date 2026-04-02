@@ -9,7 +9,7 @@ import Foundation
 
 // MARK: - Movement constants
 
-private let movementIntervalNanoseconds: UInt64 = 100_000_000   // 100 ms
+private let movementInterval: Duration = .milliseconds(100)
 // Auto targets defined in DeskLimits (DeskProtocol.swift) — single source of truth.
 
 // MARK: - DeskManager movement extension
@@ -66,6 +66,7 @@ extension DeskManager {
     private func startManualMovementTask(direction: MoveDirection) {
         let command = manualCommand(for: direction)
         let controller = bleController
+        let clockRef = clock
         movementTask = Task {
             while !Task.isCancelled {
                 try? await controller.write(
@@ -73,7 +74,7 @@ extension DeskManager {
                     to: DeskUUID.command,
                     type: .withoutResponse
                 )
-                try? await Task.sleep(nanoseconds: movementIntervalNanoseconds)
+                try? await clockRef.sleep(for: movementInterval)
             }
         }
     }
@@ -88,6 +89,7 @@ extension DeskManager {
 
         let target = autoTarget(for: direction)
         let controller = bleController
+        let clockRef = clock
         movementTask = Task {
             while !Task.isCancelled {
                 try? await controller.write(
@@ -95,7 +97,7 @@ extension DeskManager {
                     to: DeskUUID.targetHeartbeat,
                     type: .withoutResponse
                 )
-                try? await Task.sleep(nanoseconds: movementIntervalNanoseconds)
+                try? await clockRef.sleep(for: movementInterval)
             }
         }
     }

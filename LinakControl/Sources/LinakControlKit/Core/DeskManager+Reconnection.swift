@@ -54,6 +54,7 @@ extension DeskManager {
     }
 
     private func runReconnectionLoop() async {
+        guard state.connectionState == .disconnected else { return }
         var delay = reconnectInitialDelay
 
         while !Task.isCancelled && !isUserInitiatedDisconnect {
@@ -110,6 +111,8 @@ extension DeskManager {
     }
 
     private func handleSystemWake() async {
+        guard state.connectionState == .disconnected else { return }
+
         // Poll for BLE poweredOn — CoreBluetooth needs time to resume after wake.
         let maxPolls = 20
         for _ in 0..<maxPolls {
@@ -118,8 +121,7 @@ extension DeskManager {
             try? await clock.sleep(for: .milliseconds(500))
         }
 
-        guard !isUserInitiatedDisconnect,
-              state.connectionState != .connected else { return }
+        guard !isUserInitiatedDisconnect else { return }
 
         guard let uuidString = (try? configStore.load())?.pairedDeskUUID,
               let peripheralId = UUID(uuidString: uuidString) else { return }

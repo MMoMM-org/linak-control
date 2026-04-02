@@ -8,9 +8,8 @@ import SwiftUI
 /// Root view for the Zone 1 NSPopover (280 pt wide, ~400 pt tall).
 ///
 /// Renders different content depending on `viewModel.connectionState`:
-/// - `.connected` / `.scanning` / `.connecting`: hero height + controls + presets
-/// - `.busy`: busy overlay + guidance
-/// - `.disconnected`: disconnected state with retry button
+/// - `.connected`: hero height + controls + presets
+/// - `.disconnected` / `.scanning` / `.connecting`: disconnected state with retry button
 public struct PopoverView: View {
 
     @ObservedObject public var viewModel: DeskViewModel
@@ -29,8 +28,6 @@ public struct PopoverView: View {
                 switch viewModel.connectionState {
                 case .connected:
                     ConnectedContent(viewModel: viewModel)
-                case .busy:
-                    BusyContent(viewModel: viewModel)
                 case .disconnected, .scanning, .connecting:
                     DisconnectedContent(viewModel: viewModel)
                 }
@@ -104,37 +101,6 @@ private struct DisconnectedContent: View {
         switch viewModel.connectionState {
         case .scanning, .connecting: return "Looking for your desk"
         default: return "Reconnecting..."
-        }
-    }
-}
-
-// MARK: - BusyContent
-
-private struct BusyContent: View {
-    @ObservedObject var viewModel: DeskViewModel
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "hourglass")
-                .font(.system(size: 32))
-                .foregroundColor(.secondary)
-
-            Text("Desk Busy")
-                .font(.headline)
-
-            Text("Another operation is in progress.\nWait a moment and try again.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-
-            Button("Retry") { viewModel.retryConnection() }
-                .buttonStyle(.borderedProminent)
-
-            Divider()
-
-            MovementControlView(viewModel: viewModel)
-            PresetGridView(viewModel: viewModel)
-            FooterView(viewModel: viewModel)
         }
     }
 }

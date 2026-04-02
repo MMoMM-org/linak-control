@@ -137,8 +137,7 @@ private func activateDPGSession(
     FileLog.debug("handshake: USER_ID read", category: "handshake")
     try await bleController.write(data: DeskCommand.getUserID, to: DeskUUID.dpg, type: .withResponse)
     let userIdResponse = try await buffer.next()
-    let hex = userIdResponse.map { String(format: "%02x", $0) }.joined(separator: " ")
-    FileLog.debug("handshake: USER_ID response = [\(hex)] (\(userIdResponse.count) bytes)", category: "handshake")
+    FileLog.debug("handshake: USER_ID response: \(userIdResponse.count) bytes, byte0=\(userIdResponse.first.map { String(format: "%02x", $0) } ?? "n/a")", category: "handshake")
 
     // Build the user data payload for the write-back.
     // DPG response format: [status, length, ...payload].
@@ -164,12 +163,10 @@ private func activateDPGSession(
             userData[0] = 0x01
         }
         let setCommand = DeskCommand.setUserID(userData: userData)
-        let setHex = setCommand.map { String(format: "%02x", $0) }.joined(separator: " ")
-        FileLog.debug("handshake: USER_ID write = [\(setHex)]", category: "handshake")
+        FileLog.debug("handshake: USER_ID write: \(setCommand.count) bytes", category: "handshake")
         try await bleController.write(data: setCommand, to: DeskUUID.dpg, type: .withResponse)
         let writeResponse = try await buffer.next()
-        let writeHex = writeResponse.map { String(format: "%02x", $0) }.joined(separator: " ")
-        FileLog.debug("handshake: USER_ID write response = [\(writeHex)]", category: "handshake")
+        FileLog.debug("handshake: USER_ID write response: \(writeResponse.count) bytes, byte0=\(writeResponse.first.map { String(format: "%02x", $0) } ?? "n/a")", category: "handshake")
     }
 }
 
@@ -196,7 +193,7 @@ private func issueDPGQueries(
 private func parseCapabilitiesOrThrow(from responses: [Data]) throws -> DeskCapabilities {
     // responses[0] is the GET_CAPABILITIES (7F 80) response
     guard let capabilities = parseCapabilities(responses[0]) else {
-        throw DeskError.handshakeTimeout
+        throw DeskError.invalidResponse
     }
     return capabilities
 }

@@ -129,7 +129,11 @@ public final class DeskViewModel: ObservableObject {
     }
 
     public func savePreset(index: Int) {
-        Task { try? await deskManager.savePreset(index: index) }
+        FileLog.debug("savePreset(\(index))", category: "ui")
+        Task {
+            do { try await deskManager.savePreset(index: index) }
+            catch { FileLog.debug("savePreset FAILED: \(error)", category: "ui") }
+        }
     }
 
     /// Starts a BLE scan and collects discovered desks into `discoveredDesks`.
@@ -206,7 +210,7 @@ public final class DeskViewModel: ObservableObject {
             guard let uuidString = config?.pairedDeskUUID,
                   let peripheralId = UUID(uuidString: uuidString) else {
                 FileLog.debug("retryConnection: no paired desk UUID, starting scan", category: "ui")
-                _ = await deskManager.scan()
+                startScan()
                 return
             }
             FileLog.debug("retryConnection: connecting to \(uuidString)", category: "ui")

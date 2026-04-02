@@ -8,7 +8,6 @@ public enum ConnectionState: Equatable {
     case scanning
     case connecting
     case connected
-    case busy
 }
 
 // MARK: - MoveDirection

@@ -116,7 +116,7 @@ extension DeskManager {
             )
             try? await clock.sleep(for: presetLoopInterval)
         }
-        clearPresetMoveState()
+        await clearPresetMoveState()
     }
 
     /// Returns true when desk height is within the arrival tolerance of the target.
@@ -127,13 +127,11 @@ extension DeskManager {
 
     /// Clears movement and target state after the control loop completes.
     /// Sends stop commands to ensure the desk halts, then resets the movement flags.
-    private func clearPresetMoveState() {
+    private func clearPresetMoveState() async {
         FileLog.debug("clearPresetMoveState: height=\(state.heightMM.map(String.init) ?? "nil")", category: "core")
         // Send stop to ensure desk stops and speed drops to zero.
-        Task {
-            try? await bleController.write(data: DeskCommand.stop, to: DeskUUID.command, type: .withoutResponse)
-            try? await bleController.write(data: DeskCommand.stop, to: DeskUUID.command, type: .withoutResponse)
-        }
+        try? await bleController.write(data: DeskCommand.stop, to: DeskUUID.command, type: .withoutResponse)
+        try? await bleController.write(data: DeskCommand.stop, to: DeskUUID.command, type: .withoutResponse)
         updateState {
             $0.isMoving = false
             $0.moveDirection = nil

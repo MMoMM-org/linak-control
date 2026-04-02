@@ -159,10 +159,12 @@ public final class BLEController: NSObject, BLEControllerProtocol, @unchecked Se
                     return
                 }
 
+                #if DEBUG
                 let hex = data.map { String(format: "%02x", $0) }.joined(separator: " ")
                 let typeStr = type == .withResponse ? "withResponse" : "withoutResponse"
                 let props = characteristic.properties
                 FileLog.debug("write: [\(hex)] to \(characteristicUUID.uuidString) type=\(typeStr) props=\(props.rawValue)", category: "ble")
+                #endif
 
                 if type == .withResponse {
                     // Reject if a write is already in flight for this UUID.
@@ -303,7 +305,7 @@ extension BLEController: CBCentralManagerDelegate {
         advertisementData: [String: Any],
         rssi RSSI: NSNumber
     ) {
-        let name = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown"
+        let name = String((peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown").prefix(64))
         FileLog.debug("didDiscover: '\(name)' id=\(peripheral.identifier) rssi=\(RSSI)", category: "ble")
         let desk = DiscoveredDesk(
             peripheralId: peripheral.identifier,

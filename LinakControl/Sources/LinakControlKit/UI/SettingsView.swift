@@ -229,7 +229,7 @@ private struct PresetsSection: View {
             SectionHeader(title: "Presets")
 
             ForEach(viewModel.presets, id: \.index) { preset in
-                PresetRowView(preset: preset) {
+                PresetRowView(preset: preset, unit: viewModel.unit) {
                     viewModel.savePreset(index: preset.index)
                 }
             }
@@ -241,6 +241,7 @@ private struct PresetsSection: View {
 
 private struct PresetRowView: View {
     let preset: PresetPosition
+    let unit: HeightUnit
     let onSave: () -> Void
 
     var body: some View {
@@ -249,7 +250,7 @@ private struct PresetRowView: View {
                 .frame(width: 16, alignment: .leading)
 
             if let heightMM = preset.heightMM {
-                Text(HeightConverter.display(mm: heightMM, unit: .cm))
+                Text(HeightConverter.display(mm: heightMM, unit: unit))
                     .font(.body)
             } else {
                 Text("—")

@@ -69,6 +69,7 @@ public final class ConfigStore {
         let fm = FileManager.default
         if fm.fileExists(atPath: fileURL.path) {
             try data.write(to: fileURL, options: .atomic)
+            try? fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: fileURL.path)
         } else {
             fm.createFile(
                 atPath: fileURL.path,
