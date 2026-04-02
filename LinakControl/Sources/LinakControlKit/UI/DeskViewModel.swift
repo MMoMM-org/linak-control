@@ -302,8 +302,9 @@ public final class DeskViewModel: ObservableObject {
         connectionState = snapshot.connectionState
         heightMM = snapshot.heightMM
 
-        // Update offset from desk state (handshake may have provided a new one).
-        if snapshot.deskOffsetMM > 0 {
+        // Only adopt the handshake offset when no user-configured offset exists.
+        // The user's manual setting (persisted in config) takes priority.
+        if deskOffsetMM == 0 && snapshot.deskOffsetMM > 0 {
             deskOffsetMM = snapshot.deskOffsetMM
         }
 
