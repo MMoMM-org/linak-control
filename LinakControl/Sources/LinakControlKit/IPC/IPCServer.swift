@@ -147,9 +147,9 @@ public final class IPCServer: @unchecked Sendable {
         }
 
         // Set restrictive umask before bind to avoid TOCTOU race on socket permissions.
-        // The socket file is created by bind() with permissions masked by umask, so
-        // 0o077 ensures it is created as owner-only (0o600) from the start.
-        let previousUmask = umask(0o077)
+        // bind() creates the socket file with (0o777 & ~umask). Using 0o177 gives
+        // rw------- (0o600) — no execute bit, owner-only read/write.
+        let previousUmask = umask(0o177)
         let bindResult = withUnsafePointer(to: &addr) { ptr in
             ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPtr in
                 bind(fd, sockaddrPtr, socklen_t(MemoryLayout<sockaddr_un>.size))
