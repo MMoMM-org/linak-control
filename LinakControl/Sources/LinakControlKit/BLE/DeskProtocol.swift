@@ -20,13 +20,16 @@ public struct DeskCapabilities: Sendable {
 
 // MARK: - Protocol Constants
 
-/// Valid physical desk range in mm. Accepts a wider band than the mechanical
-/// limits so marginal sensor readings are still usable.
-private let validHeightRange = 500...1500
+/// Valid raw position range in mm. The height characteristic (0x0021) reports
+/// values relative to the desk's lowest position. Typical travel is 0–650mm.
+/// We accept a wider band for sensor margin.
+private let validHeightRange = 0...7000
 
-/// Safe command range in mm. Values outside this range are rejected by
+/// Safe raw command range in mm. Values outside this range are rejected by
 /// `encodeTargetHeight` to protect the desk mechanics.
-private let safeCommandRange = 600...1350
+/// Typical desk travel is 0–~650mm from lowest position.
+/// Upper limit 6500mm is the uint16 safe boundary (6500 * 10 = 65000 < 65535).
+private let safeCommandRange = 0...6500
 
 // MARK: - Decoding
 

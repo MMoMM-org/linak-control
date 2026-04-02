@@ -281,18 +281,15 @@ final class DeskManagerPresetCancellationTests: XCTestCase {
 
 final class DeskManagerPresetSafetyTests: XCTestCase {
 
-    func testGoToPresetRejectsTargetBelowMinimum() async throws {
+    /// encodeTargetHeight rejects values outside the safe raw range (0...7000mm).
+    /// Since uint16 limits preset heights to ~6553mm, out-of-range presets are
+    /// tested at the encoding level in DeskProtocolTests rather than end-to-end.
+    func testGoToPresetWithUnsetPresetThrowsPresetNotSet() async throws {
         let mock = MockBLEController()
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
 
-        // Craft DPG responses with preset 1 at 500mm (out of range)
-        // 500mm = 5000 tenths = 0x1388 -> lo=0x88, hi=0x13
-        // DPG format: [status, length, slot, height_lo, height_hi, ...]
-        let preset1At500mm = Data([0x01, 0x07, 0x01, 0x88, 0x13, 0x00, 0x00, 0x00, 0x00])
         var dpgResponses = HandshakeFixtures.happyPathDPGResponses
-        // Index 5 = preset 1 (after USER_ID read/write ack + caps + capsExt + offset)
-        dpgResponses[5] = preset1At500mm
-
+        // Preset 4 is already unset in fixtures
         mock.mockNotificationStreams[DeskUUID.dpg] = AsyncStream { cont in
             for r in dpgResponses { cont.yield(r) }
             cont.finish()
@@ -303,51 +300,14 @@ final class DeskManagerPresetSafetyTests: XCTestCase {
 
         let manager = DeskManager(bleController: mock, configStore: makePresetTempConfigStore())
         let connectTask = Task { try await manager.connect(peripheralId: UUID()) }
-        heightCont.yield(makePresetHeightPacket(mm: 730))
+        heightCont.yield(makePresetHeightPacket(mm: 420))
         try await connectTask.value
 
         do {
-            try await manager.goToPreset(index: 1)
-            XCTFail("Expected DeskError.targetOutOfRange")
-        } catch DeskError.targetOutOfRange(let height) {
-            XCTAssertEqual(height, 500)
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
-
-        heightCont.finish()
-    }
-
-    func testGoToPresetRejectsTargetAboveMaximum() async throws {
-        let mock = MockBLEController()
-        mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
-
-        // Preset 1 at 1400mm (out of range)
-        // 1400mm = 14000 tenths = 0x36B0 -> lo=0xB0, hi=0x36
-        // DPG format: [status, length, slot, height_lo, height_hi, ...]
-        let preset1At1400mm = Data([0x01, 0x07, 0x01, 0xB0, 0x36, 0x00, 0x00, 0x00, 0x00])
-        var dpgResponses = HandshakeFixtures.happyPathDPGResponses
-        // Index 5 = preset 1 (after USER_ID read/write ack + caps + capsExt + offset)
-        dpgResponses[5] = preset1At1400mm
-
-        mock.mockNotificationStreams[DeskUUID.dpg] = AsyncStream { cont in
-            for r in dpgResponses { cont.yield(r) }
-            cont.finish()
-        }
-
-        var heightCont: AsyncStream<Data>.Continuation!
-        mock.mockNotificationStreams[DeskUUID.height] = AsyncStream { cont in heightCont = cont }
-
-        let manager = DeskManager(bleController: mock, configStore: makePresetTempConfigStore())
-        let connectTask = Task { try await manager.connect(peripheralId: UUID()) }
-        heightCont.yield(makePresetHeightPacket(mm: 730))
-        try await connectTask.value
-
-        do {
-            try await manager.goToPreset(index: 1)
-            XCTFail("Expected DeskError.targetOutOfRange")
-        } catch DeskError.targetOutOfRange(let height) {
-            XCTAssertEqual(height, 1400)
+            try await manager.goToPreset(index: 4)
+            XCTFail("Expected DeskError.presetNotSet")
+        } catch DeskError.presetNotSet(let index) {
+            XCTAssertEqual(index, 4)
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
