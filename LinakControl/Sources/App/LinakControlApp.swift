@@ -81,5 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyManager?.disable()
         ipcServer?.stop()
         connectionObserverTask?.cancel()
+        // Disconnect BLE cleanly so the desk is available on next launch.
+        Task { await deskManager?.disconnect() }
     }
 }

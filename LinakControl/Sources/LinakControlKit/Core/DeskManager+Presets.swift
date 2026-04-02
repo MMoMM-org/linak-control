@@ -13,7 +13,8 @@ private let presetArrivalToleranceMM = 5
 private let presetTimeout: Duration = .seconds(30)
 private let presetLoopInterval: Duration = .milliseconds(100)
 private let presetPreflightDelay: Duration = .milliseconds(100)
-private let validHeightRangeMM: ClosedRange<Int> = 600...1350
+/// Valid raw position range for preset targets. Must match DeskProtocol's safeCommandRange.
+private let validHeightRangeMM: ClosedRange<Int> = 0...6500
 
 // MARK: - DeskManager preset extension
 
@@ -59,7 +60,7 @@ extension DeskManager {
         return heightMM
     }
 
-    /// Throws `DeskError.targetOutOfRange` if target falls outside 600...1350 mm.
+    /// Throws `DeskError.targetOutOfRange` if target falls outside the safe raw range.
     private func guardHeightInRange(_ heightMM: Int) throws {
         guard validHeightRangeMM.contains(heightMM) else {
             throw DeskError.targetOutOfRange(heightMM)
