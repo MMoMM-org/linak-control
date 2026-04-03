@@ -18,7 +18,9 @@ private func makeConnectedManagerForSave(
 ) async throws -> (DeskManager, MockBLEController) {
     let mock = MockBLEController()
     mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask
-    mock.mockReadResponses[DeskUUID.height] = HandshakeFixtures.heightNotification730mm
+    // Use the same height for the direct read (handshake) and notification stream
+    // to avoid a race between the notification task and the save call.
+    mock.mockReadResponses[DeskUUID.height] = makeHeightPacketForSave(mm: heightMM)
     mock.mockNotificationStreams[DeskUUID.dpg] = makeDPGStream(
         responses: HandshakeFixtures.happyPathDPGResponses
     )
@@ -43,15 +45,18 @@ private func makeFiniteStream(responses: [Data]) -> AsyncStream<Data> {
     makeDPGStream(responses: responses)
 }
 
-private func makeHeightStream(mm: Int) -> AsyncStream<Data> {
+private func makeHeightPacketForSave(mm: Int) -> Data {
     let raw = UInt16(mm * 10)
-    let packet = Data([
+    return Data([
         UInt8(raw & 0xFF),
         UInt8(raw >> 8),
         0x00, 0x00,
     ])
-    return AsyncStream { continuation in
-        continuation.yield(packet)
+}
+
+private func makeHeightStream(mm: Int) -> AsyncStream<Data> {
+    AsyncStream { continuation in
+        continuation.yield(makeHeightPacketForSave(mm: mm))
         continuation.finish()
     }
 }

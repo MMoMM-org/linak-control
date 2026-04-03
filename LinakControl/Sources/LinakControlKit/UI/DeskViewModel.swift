@@ -166,18 +166,29 @@ public final class DeskViewModel: ObservableObject {
     /// arrive via `stateStream`; errors are swallowed since the UI shows state changes.
     private var connectTask: Task<Void, Never>?
 
+    /// Local guard against double-click races. The stateStream update to
+    /// `.connecting` arrives asynchronously; without this flag a rapid second
+    /// click slips through the connectionState guard and cancels the first
+    /// BLE connect — leaving connectContinuation dangling in BLEController.
+    private var isSelectingDesk = false
+
     public func selectDesk(_ desk: DiscoveredDesk) {
-        // Ignore if already connecting/connected to this desk.
-        guard connectionState != .connecting && connectionState != .connected else {
-            FileLog.debug("selectDesk: ignored -- already \(connectionState)", category: "ui")
+        guard !isSelectingDesk && connectionState != .connecting && connectionState != .connected else {
+            FileLog.debug("selectDesk: ignored -- already selecting or \(connectionState)", category: "ui")
             return
         }
+        isSelectingDesk = true
         selectedPeripheralId = desk.peripheralId
         selectedDeskName = desk.name
+        // Persist name early so applyHandshakeResult finds it in config.
+        persistConfig { $0.pairedDeskName = desk.name }
         scanTask?.cancel()
         connectTask?.cancel()
         FileLog.debug("selectDesk: connecting to '\(desk.name)'", category: "ui")
-        connectTask = Task { try? await deskManager.connect(peripheralId: desk.peripheralId) }
+        connectTask = Task { [weak self] in
+            try? await self?.deskManager.connect(peripheralId: desk.peripheralId)
+            await MainActor.run { self?.isSelectingDesk = false }
+        }
     }
 
     /// Finalises the first-run pairing flow.
@@ -292,6 +303,13 @@ public final class DeskViewModel: ObservableObject {
             $0.pairedDeskUUID = nil
             $0.pairedDeskName = nil
         }
+        // Reset UI state immediately — the async disconnect state update
+        // arrives too late, causing a brief "connected" flash.
+        connectionState = .disconnected
+        deskName = nil
+        heightMM = nil
+        heightDisplay = "—"
+        isMoving = false
         Task { await deskManager.disconnect() }
         showSettings = false
         isFirstRun = true
