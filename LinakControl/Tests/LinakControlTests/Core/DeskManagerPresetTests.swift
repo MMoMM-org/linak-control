@@ -314,8 +314,8 @@ final class DeskManagerPresetSafetyTests: XCTestCase {
 
         // Replace preset 1 in the DPG response sequence
         var responses = HandshakeFixtures.happyPathDPGResponses
-        // Index 4 is preset1Height730mm in the happyPathDPGResponses array
-        responses[4] = preset1OutOfRange
+        // Index 5 is preset1Height730mm (after USER_ID read, write-back ack, caps, capsExt, offset)
+        responses[5] = preset1OutOfRange
 
         let mock = MockBLEController()
         mock.mockReadResponses[DeskUUID.outputMask] = HandshakeFixtures.validOutputMask

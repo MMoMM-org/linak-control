@@ -100,8 +100,9 @@ enum HandshakeFixtures {
     // then issues 7 DPG queries (capabilities, capabilitiesExtended, deskOffset, presets 1-4).
 
     static let happyPathDPGResponses: [Data] = [
-        // activateDPGSession: USER_ID read response (write skipped when byte 0 == 0x01)
+        // activateDPGSession: USER_ID read + write-back ack
         userID,
+        userIDWriteAck,
         // issueDPGQueries: 7 query responses
         capabilities4PresetsAutoUp,
         capabilitiesExtended,
