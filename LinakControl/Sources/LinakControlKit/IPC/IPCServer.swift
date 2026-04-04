@@ -350,12 +350,19 @@ public final class IPCServer: @unchecked Sendable {
 extension IPCServer {
 
     func buildStatusResult(from state: DeskState, config: AppConfig) -> StatusResult {
-        let heightDisplay = state.heightMM.map { HeightConverter.display(mm: $0, unit: config.unit) }
-        let presets = state.presets.map { PresetInfo(index: $0.index, heightMM: $0.heightMM, label: $0.label) }
+        let offset = state.deskOffsetMM
+        let heightDisplay = state.heightMM.map { HeightConverter.display(mm: $0 + offset, unit: config.unit) }
+        let presets = state.presets.map { preset in
+            PresetInfo(
+                index: preset.index,
+                heightMM: preset.heightMM.map { $0 + offset },
+                label: preset.label
+            )
+        }
         return StatusResult(
             connected: state.connectionState == .connected,
             deskName: state.deskName,
-            heightMM: state.heightMM,
+            heightMM: state.heightMM.map { $0 + offset },
             heightDisplay: heightDisplay,
             unit: config.unit.rawValue,
             presets: presets,
