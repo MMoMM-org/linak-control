@@ -90,11 +90,13 @@ final class DeskCharacteristicsTests: XCTestCase {
     }
 
     func testGetCapabilitiesExtendedBytes() {
-        XCTAssertEqual(DeskCommand.getCapabilitiesExtended, Data([0x7F, 0x86, 0x00]))
+        // getUserID is now 0x86 (was incorrectly labelled getCapabilitiesExtended)
+        XCTAssertEqual(DeskCommand.getUserID, Data([0x7F, 0x86, 0x00]))
+        XCTAssertEqual(DeskCommand.getBaseOffset, Data([0x7F, 0x81, 0x00]))
     }
 
     func testGetUserIDBytes() {
-        XCTAssertEqual(DeskCommand.getUserID, Data([0x7F, 0x81, 0x00]))
+        XCTAssertEqual(DeskCommand.getUserID, Data([0x7F, 0x86, 0x00]))
     }
 
     func testGetDeskOffsetBytes() {
@@ -106,7 +108,7 @@ final class DeskCharacteristicsTests: XCTestCase {
     func testSetUserIDBytes() {
         let userData = Data([0x01, 0x00])
         let result = DeskCommand.setUserID(userData: userData)
-        XCTAssertEqual(result, Data([0x7F, 0x81, 0x80, 0x01, 0x00]))
+        XCTAssertEqual(result, Data([0x7F, 0x86, 0x80, 0x01, 0x00]))
     }
 
     // MARK: - moveTo encoding

@@ -125,7 +125,7 @@ final class HandshakeDPGQueryOrderTests: XCTestCase {
         XCTAssertEqual(dpgWrites[0].data, DeskCommand.getUserID)
         // Step 4: issueDPGQueries -- 7 queries
         XCTAssertEqual(dpgWrites[1].data, DeskCommand.getCapabilities)
-        XCTAssertEqual(dpgWrites[2].data, DeskCommand.getCapabilitiesExtended)
+        XCTAssertEqual(dpgWrites[2].data, DeskCommand.getBaseOffset)
         XCTAssertEqual(dpgWrites[3].data, DeskCommand.getDeskOffset)
         XCTAssertEqual(dpgWrites[4].data, DeskCommand.readPreset(index: 1))
         XCTAssertEqual(dpgWrites[5].data, DeskCommand.readPreset(index: 2))

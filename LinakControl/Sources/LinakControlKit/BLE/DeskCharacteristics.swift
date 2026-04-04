@@ -94,22 +94,24 @@ public enum DeskCommand {
     /// Query general desk capabilities.
     public static let getCapabilities = Data([0x7F, 0x80, 0x00])
 
-    /// Query extended desk capabilities.
-    public static let getCapabilitiesExtended = Data([0x7F, 0x86, 0x00])
+    /// Query the active user ID stored in the desk (DPG cmd 134 / 0x86).
+    /// The USER_ID must be read and written back with byte 0 = 0x01 to
+    /// activate the motor controller for movement commands.
+    public static let getUserID = Data([0x7F, 0x86, 0x00])
 
-    /// Query the active user ID stored in the desk.
-    public static let getUserID = Data([0x7F, 0x81, 0x00])
+    /// Query the desk's base height offset (DPG cmd 129 / 0x81).
+    public static let getBaseOffset = Data([0x7F, 0x81, 0x00])
 
-    /// Query the desk's programmed height offset.
+    /// Query the desk's programmed height offset (DPG cmd 136 / 0x88).
     public static let getDeskOffset = Data([0x7F, 0x88, 0x00])
 
-    /// Write the user ID to activate the DPG session.
+    /// Write the user ID to activate the DPG session (DPG cmd 134 / 0x86).
     ///
-    /// The desk requires a USER_ID write before responding to any DPG queries.
+    /// The desk requires a USER_ID write before responding to movement commands.
     /// The first byte of the user ID payload must be `0x01` for DPG1C desks.
     /// - Parameter userData: The user ID bytes read from GET_USER_ID (modified if needed).
     public static func setUserID(userData: Data) -> Data {
-        var payload = Data([0x7F, 0x81, 0x80])
+        var payload = Data([0x7F, 0x86, 0x80])
         payload.append(userData)
         return payload
     }

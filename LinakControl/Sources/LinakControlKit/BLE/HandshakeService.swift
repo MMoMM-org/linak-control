@@ -39,7 +39,7 @@ private struct DPGQuery {
 /// Post-init queries issued after the DPG session is activated.
 private let dpgQueries: [DPGQuery] = [
     DPGQuery(command: DeskCommand.getCapabilities,         label: "GET_CAPABILITIES"),
-    DPGQuery(command: DeskCommand.getCapabilitiesExtended, label: "GET_CAPABILITIES_EXTENDED"),
+    DPGQuery(command: DeskCommand.getBaseOffset,           label: "GET_BASE_OFFSET"),
     DPGQuery(command: DeskCommand.getDeskOffset,           label: "GET_DESK_OFFSET"),
     DPGQuery(command: DeskCommand.readPreset(index: 1)!,   label: "GET_MEMORY_POSITION_1"),
     DPGQuery(command: DeskCommand.readPreset(index: 2)!,   label: "GET_MEMORY_POSITION_2"),

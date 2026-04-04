@@ -44,7 +44,7 @@ enum HandshakeFixtures {
 
     // MARK: Extended capabilities (GET_CAPABILITIES_EXTENDED -- 7F 86 00)
 
-    static let capabilitiesExtended = Data([0x01, 0x02, 0x00, 0x00])
+    static let baseOffsetResponse = Data([0x01, 0x02, 0x00, 0x00])
 
     // MARK: User ID (GET_USER_ID -- 7F 81 00)
     //
@@ -97,14 +97,14 @@ enum HandshakeFixtures {
     // MARK: Full DPG response sequence (happy path -- 9 responses)
     //
     // The handshake first activates the DPG session via USER_ID read + write (2 responses),
-    // then issues 7 DPG queries (capabilities, capabilitiesExtended, deskOffset, presets 1-4).
+    // then issues 7 DPG queries (capabilities, baseOffsetResponse, deskOffset, presets 1-4).
 
     static let happyPathDPGResponses: [Data] = [
         // activateDPGSession: USER_ID read (write skipped when byte 0 == 0x01)
         userID,
         // issueDPGQueries: 7 query responses
         capabilities4PresetsAutoUp,
-        capabilitiesExtended,
+        baseOffsetResponse,
         deskOffset,
         preset1Height730mm,
         preset2Height1105mm,
