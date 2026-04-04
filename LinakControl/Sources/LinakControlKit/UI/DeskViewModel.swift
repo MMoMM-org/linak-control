@@ -299,6 +299,13 @@ public final class DeskViewModel: ObservableObject {
         persistConfig { $0.hotkeysEnabled = enabled }
     }
 
+    /// Updates a preset label and persists to config.
+    public func updatePresetLabel(index: Int, label: String?) {
+        let trimmed = label?.trimmingCharacters(in: .whitespaces)
+        let value = (trimmed?.isEmpty == true) ? nil : trimmed
+        persistConfig { $0.presetLabels[index - 1] = value }
+    }
+
     /// Updates the Zone 2 visibility setting and persists to config.
     public func updateShowZone2(_ visible: Bool) {
         showZone2 = visible
