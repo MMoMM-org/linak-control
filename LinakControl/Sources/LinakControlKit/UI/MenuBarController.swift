@@ -41,7 +41,7 @@ public final class MenuBarController: NSObject {
     public func setup(autoOpen: Bool = false) {
         FileLog.debug("setup(autoOpen: \(autoOpen)) isFirstRun=\(viewModel.isFirstRun)", category: "ui")
         setupZone1()
-        setupZone2()
+        if viewModel.showZone2 { setupZone2() }
         startObservingViewModel()
 
         if autoOpen {
@@ -130,7 +130,20 @@ public final class MenuBarController: NSObject {
     }
 
     private func updateZone2Visibility() {
-        zone2StatusItem?.isVisible = viewModel.showZone2
+        let shouldShow = viewModel.showZone2
+        let isShown = zone2StatusItem != nil
+        if shouldShow && !isShown {
+            setupZone2()
+        } else if !shouldShow && isShown {
+            teardownZone2()
+        }
+    }
+
+    private func teardownZone2() {
+        if let item = zone2StatusItem {
+            NSStatusBar.system.removeStatusItem(item)
+            zone2StatusItem = nil
+        }
     }
 
     private func updateZone2Title() {
