@@ -65,7 +65,8 @@ private struct MovementButton: View {
     }
 
     private var label: String {
-        if isAutoAndMoving { return "Stop" }
+        // Show Stop when moving in this direction (from any source: preset, auto, manual).
+        if isMovingThisDirection { return "■" }
         return direction == .up ? "▲" : "▼"
     }
 
@@ -97,37 +98,46 @@ private struct MovementButton: View {
 
     private var autoButton: some View {
         Button(label) {
-            if viewModel.isMoving {
+            if isMovingThisDirection {
                 viewModel.stop()
             } else {
                 triggerMove()
             }
         }
         .buttonStyle(.bordered)
-        .disabled(!isConnected)
+        .disabled(!isConnected || isOppositeMoving)
         .frame(minWidth: 64)
     }
 
     // MARK: Manual mode button
 
     private var manualButton: some View {
-        Button(label) {}
-            .buttonStyle(.bordered)
-            .frame(minWidth: 64)
-            .disabled(!isConnected)
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in
-                        guard isConnected, !isHolding else { return }
-                        isHolding = true
-                        triggerMove()
-                    }
-                    .onEnded { _ in
-                        guard isHolding else { return }
-                        isHolding = false
-                        viewModel.stop()
-                    }
-            )
+        Group {
+            if isMovingThisDirection {
+                // During active movement (e.g. preset), show a simple stop button.
+                Button(label) { viewModel.stop() }
+                    .buttonStyle(.bordered)
+                    .frame(minWidth: 64)
+            } else {
+                Button(label) {}
+                    .buttonStyle(.bordered)
+                    .frame(minWidth: 64)
+                    .disabled(!isConnected || isOppositeMoving)
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { _ in
+                                guard isConnected, !isHolding else { return }
+                                isHolding = true
+                                triggerMove()
+                            }
+                            .onEnded { _ in
+                                guard isHolding else { return }
+                                isHolding = false
+                                viewModel.stop()
+                            }
+                    )
+            }
+        }
     }
 
     // MARK: Shared
