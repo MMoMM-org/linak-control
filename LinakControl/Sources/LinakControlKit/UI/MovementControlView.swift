@@ -112,32 +112,26 @@ private struct MovementButton: View {
     // MARK: Manual mode button
 
     private var manualButton: some View {
-        Group {
-            if isMovingThisDirection {
-                // During active movement (e.g. preset), show a simple stop button.
-                Button(label) { viewModel.stop() }
-                    .buttonStyle(.bordered)
-                    .frame(minWidth: 64)
-            } else {
-                Button(label) {}
-                    .buttonStyle(.bordered)
-                    .frame(minWidth: 64)
-                    .disabled(!isConnected || isOppositeMoving)
-                    .simultaneousGesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { _ in
-                                guard isConnected, !isHolding else { return }
-                                isHolding = true
-                                triggerMove()
-                            }
-                            .onEnded { _ in
-                                guard isHolding else { return }
-                                isHolding = false
-                                viewModel.stop()
-                            }
-                    )
-            }
+        Button(label) {
+            // Tap stops during any active movement (e.g. preset-initiated).
+            if viewModel.isMoving && !isHolding { viewModel.stop() }
         }
+        .buttonStyle(.bordered)
+        .frame(minWidth: 64)
+        .disabled(!isConnected || isOppositeMoving)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    guard isConnected, !isHolding, !viewModel.isMoving else { return }
+                    isHolding = true
+                    triggerMove()
+                }
+                .onEnded { _ in
+                    guard isHolding else { return }
+                    isHolding = false
+                    viewModel.stop()
+                }
+        )
     }
 
     // MARK: Shared

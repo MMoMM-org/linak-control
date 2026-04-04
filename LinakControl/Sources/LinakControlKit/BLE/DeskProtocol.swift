@@ -27,15 +27,18 @@ public enum DeskLimits {
     /// Typical travel is 0-650mm; wider band for sensor margin.
     public static let validHeightRange: ClosedRange<Int> = 0...7000
 
-    /// Safe raw command range in mm for move-to targets.
-    /// Upper limit 6500 keeps uint16 encoding safe (6500 * 10 = 65000 < 65535).
+    /// Safe raw command range in mm for move-to targets (preset validation).
+    /// Wide enough to accommodate desks with different stroke lengths.
     public static let safeCommandRange: ClosedRange<Int> = 0...6500
 
-    /// Auto-up target in 0.1mm units -- top of safe range.
-    public static let autoUpTargetTenths: UInt16 = UInt16(safeCommandRange.upperBound * 10)
+    /// Auto-up target in 0.1mm units. Set to ~650mm raw which is above
+    /// typical max stroke (~500mm). The desk's own limit stop prevents
+    /// over-travel. Must NOT exceed ~6500 tenths (650mm) — values like
+    /// 65000 cause the desk to move to its safety position (lowest).
+    public static let autoUpTargetTenths: UInt16 = 6500
 
-    /// Auto-down target in 0.1mm units -- bottom of safe range.
-    public static let autoDownTargetTenths: UInt16 = UInt16(safeCommandRange.lowerBound * 10)
+    /// Auto-down target in 0.1mm units -- lowest position.
+    public static let autoDownTargetTenths: UInt16 = 0
 }
 
 // MARK: - DeskProtocol namespace
