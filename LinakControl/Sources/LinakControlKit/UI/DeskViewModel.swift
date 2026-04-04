@@ -52,6 +52,9 @@ public final class DeskViewModel: ObservableObject {
     /// Mirrors `AppConfig.hotkeysEnabled`.
     @Published public var hotkeysEnabled: Bool = false
 
+    /// Mirrors `AppConfig.showZone2`. Controls visibility of the preset menu bar item.
+    @Published public var showZone2: Bool = true
+
     // MARK: - Dependencies
 
     private let deskManager: DeskManager
@@ -86,6 +89,7 @@ public final class DeskViewModel: ObservableObject {
         autoRunDown = config.autoRunDown
         startAtLogin = config.startAtLogin
         hotkeysEnabled = config.hotkeysEnabled
+        showZone2 = config.showZone2
         startObservingStateStream()
     }
 
@@ -293,6 +297,12 @@ public final class DeskViewModel: ObservableObject {
     public func updateHotkeysEnabled(_ enabled: Bool) {
         hotkeysEnabled = enabled
         persistConfig { $0.hotkeysEnabled = enabled }
+    }
+
+    /// Updates the Zone 2 visibility setting and persists to config.
+    public func updateShowZone2(_ visible: Bool) {
+        showZone2 = visible
+        persistConfig { $0.showZone2 = visible }
     }
 
     /// Clears pairing info, disconnects from the desk, and resets to first-run state.

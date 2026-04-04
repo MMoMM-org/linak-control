@@ -42,6 +42,9 @@ public struct AppConfig: Codable, Equatable {
     /// Enable global keyboard shortcuts. Defaults to false.
     public var hotkeysEnabled: Bool
 
+    /// Show the Zone 2 status item (preset dropdown in menu bar). Defaults to true.
+    public var showZone2: Bool
+
     // MARK: Preset Labels
 
     /// Optional labels for preset slots 1–4, e.g. ["Sitting", "Standing", nil, nil].
@@ -58,6 +61,7 @@ public struct AppConfig: Codable, Equatable {
         autoRunDown: RunMode = .manual,
         startAtLogin: Bool = false,
         hotkeysEnabled: Bool = false,
+        showZone2: Bool = true,
         presetLabels: [String?] = [nil, nil, nil, nil]
     ) {
         self.pairedDeskUUID = pairedDeskUUID
@@ -68,6 +72,7 @@ public struct AppConfig: Codable, Equatable {
         self.autoRunDown = autoRunDown
         self.startAtLogin = startAtLogin
         self.hotkeysEnabled = hotkeysEnabled
+        self.showZone2 = showZone2
         self.presetLabels = presetLabels
     }
 
@@ -82,6 +87,7 @@ public struct AppConfig: Codable, Equatable {
         case autoRunDown      = "auto_run_down"
         case startAtLogin     = "start_at_login"
         case hotkeysEnabled   = "hotkeys_enabled"
+        case showZone2        = "show_zone_2"
         case presetLabels     = "preset_labels"
 
         // Legacy keys for backward-compatible reading of old config files.
@@ -107,6 +113,7 @@ public struct AppConfig: Codable, Equatable {
         autoRunDown    = try c.decodeIfPresent(RunMode.self, forKey: .autoRunDown) ?? .manual
         startAtLogin   = try c.decodeIfPresent(Bool.self, forKey: .startAtLogin) ?? false
         hotkeysEnabled = try c.decodeIfPresent(Bool.self, forKey: .hotkeysEnabled) ?? false
+        showZone2      = try c.decodeIfPresent(Bool.self, forKey: .showZone2) ?? true
 
         if let labels = try c.decodeIfPresent([String?].self, forKey: .presetLabels) {
             presetLabels = labels
@@ -134,6 +141,7 @@ public struct AppConfig: Codable, Equatable {
         try c.encode(autoRunDown, forKey: .autoRunDown)
         try c.encode(startAtLogin, forKey: .startAtLogin)
         try c.encode(hotkeysEnabled, forKey: .hotkeysEnabled)
+        try c.encode(showZone2, forKey: .showZone2)
         try c.encode(presetLabels, forKey: .presetLabels)
     }
 

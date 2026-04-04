@@ -119,6 +119,7 @@ public final class MenuBarController: NSObject {
 
     private func refreshZones() {
         updateZone1Icon()
+        updateZone2Visibility()
         updateZone2Title()
         updatePopoverBehavior()
     }
@@ -126,6 +127,10 @@ public final class MenuBarController: NSObject {
     private func updateZone1Icon() {
         zone1StatusItem?.button?.image = zone1Image(for: viewModel.connectionState)
         zone1StatusItem?.button?.alphaValue = viewModel.connectionState == .connected ? 1.0 : 0.7
+    }
+
+    private func updateZone2Visibility() {
+        zone2StatusItem?.isVisible = viewModel.showZone2
     }
 
     private func updateZone2Title() {

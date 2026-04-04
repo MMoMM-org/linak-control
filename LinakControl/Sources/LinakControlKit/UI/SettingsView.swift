@@ -312,6 +312,11 @@ private struct SystemSection: View {
                 get: { viewModel.hotkeysEnabled },
                 set: { viewModel.updateHotkeysEnabled($0) }
             ))
+
+            Toggle("Show preset bar", isOn: Binding(
+                get: { viewModel.showZone2 },
+                set: { viewModel.updateShowZone2($0) }
+            ))
         }
     }
 }
