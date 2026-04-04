@@ -262,11 +262,23 @@ extension DeskManager {
 
     private func handleHeightNotification(_ data: Data) {
         guard let (heightMM, speedMMS) = DeskProtocol.parseHeightNotification(data) else { return }
+        let previousHeight = state.heightMM
         state.heightMM = heightMM
         state.speedMMS = speedMMS
         let isActuallyMoving = abs(speedMMS) >= Self.speedThreshold
-        state.isMoving = isActuallyMoving
-        state.moveDirection = isActuallyMoving ? moveDirection(for: speedMMS) : nil
+
+        // Only treat as moving if the height is actually changing. The desk
+        // sometimes reports non-zero speed at a constant height (settling after
+        // connect or deceleration rounding) which would clear activePreset.
+        let heightChanged = previousHeight != heightMM
+        if isActuallyMoving && heightChanged {
+            state.isMoving = true
+            state.moveDirection = moveDirection(for: speedMMS)
+        } else if !isActuallyMoving {
+            state.isMoving = false
+            state.moveDirection = nil
+        }
+
         state.activePreset = activePreset(
             height: heightMM,
             presets: state.presets,

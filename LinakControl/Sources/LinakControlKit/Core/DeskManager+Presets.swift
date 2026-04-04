@@ -135,11 +135,24 @@ extension DeskManager {
         // Send stop to ensure desk stops and speed drops to zero.
         try? await bleController.write(data: DeskCommand.stop, to: DeskUUID.command, type: .withoutResponse)
         try? await bleController.write(data: DeskCommand.stop, to: DeskUUID.command, type: .withoutResponse)
+        // Wait for deceleration — the desk sends height notifications during
+        // deceleration with speed > threshold, keeping isMoving=true. Once fully
+        // stopped it sends no more notifications, so isMoving would stay true
+        // forever. This delay lets the desk settle before we force the final state.
+        try? await clock.sleep(for: .milliseconds(500))
         updateState {
             $0.isMoving = false
             $0.moveDirection = nil
             $0.speedMMS = 0
             $0.targetPreset = nil
+            // Recalculate activePreset now that movement is done.
+            if let height = $0.heightMM {
+                $0.activePreset = activePreset(
+                    height: height,
+                    presets: $0.presets,
+                    isMoving: false
+                )
+            }
         }
     }
 }

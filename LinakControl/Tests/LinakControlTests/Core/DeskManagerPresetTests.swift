@@ -122,7 +122,7 @@ final class DeskManagerPresetHappyPathTests: XCTestCase {
         try await goToTask.value
         // The preset loop runs in a background task; give it time to detect
         // arrival and clear state after goToPreset returns.
-        try await Task.sleep(for: .milliseconds(300))
+        try await Task.sleep(for: .milliseconds(1000))
 
         let state = await setup.manager.currentState
         XCTAssertNil(state.targetPreset, "targetPreset must be nil after arrival")
@@ -142,7 +142,7 @@ final class DeskManagerPresetHappyPathTests: XCTestCase {
         try await goToTask.value
         // The preset loop runs in a background task; give it time to detect
         // arrival and clear state after goToPreset returns.
-        try await Task.sleep(for: .milliseconds(300))
+        try await Task.sleep(for: .milliseconds(1000))
 
         let state = await setup.manager.currentState
         XCTAssertNil(state.targetPreset, "Must detect arrival at exactly 5mm tolerance boundary")
