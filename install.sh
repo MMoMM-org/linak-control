@@ -29,8 +29,29 @@ fi
 echo "Installing to $INSTALL_DIR/$APP_NAME.app..."
 cp -R "$APP_PATH" "$INSTALL_DIR/"
 
+# Build and install deskctl CLI alongside the app
+echo "Building deskctl CLI (release)..."
+cd "$SCRIPT_DIR/LinakControl" && swift build -c release --product deskctl 2>&1 | tail -3
+DESKCTL_SRC="$SCRIPT_DIR/LinakControl/.build/release/deskctl"
+
+if [ -f "$DESKCTL_SRC" ]; then
+    DESKCTL_DEST="/usr/local/bin/deskctl"
+    echo "Installing deskctl to $DESKCTL_DEST..."
+    install -m 755 "$DESKCTL_SRC" "$DESKCTL_DEST" 2>/dev/null || {
+        echo "Need sudo for /usr/local/bin:"
+        sudo install -m 755 "$DESKCTL_SRC" "$DESKCTL_DEST"
+    }
+    echo "CLI installed. Run 'deskctl --help' to verify."
+fi
+
 echo ""
 echo "Done. Launch with:"
 echo "  open $INSTALL_DIR/$APP_NAME.app"
+echo ""
+echo "CLI commands:"
+echo "  deskctl status        — Show desk status"
+echo "  deskctl preset 2      — Move to preset 2"
+echo "  deskctl config show   — Show configuration"
+echo "  deskctl config reset  — Reset to defaults"
 echo ""
 echo "Or add to Login Items in System Settings for auto-start."
