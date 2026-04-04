@@ -229,12 +229,9 @@ private struct PresetsSection: View {
             SectionHeader(title: "Presets")
 
             ForEach(viewModel.presets, id: \.index) { preset in
-                PresetRowView(
-                    preset: preset,
-                    unit: viewModel.unit,
-                    onSave: { viewModel.savePreset(index: preset.index) },
-                    onLabelChange: { viewModel.updatePresetLabel(index: preset.index, label: $0) }
-                )
+                PresetRowView(preset: preset, unit: viewModel.unit) {
+                    viewModel.savePreset(index: preset.index)
+                }
             }
         }
     }
@@ -246,39 +243,25 @@ private struct PresetRowView: View {
     let preset: PresetPosition
     let unit: HeightUnit
     let onSave: () -> Void
-    let onLabelChange: (String?) -> Void
-
-    @State private var labelText: String = ""
 
     var body: some View {
-        VStack(spacing: 4) {
-            HStack {
-                Text("\(preset.index):")
-                    .frame(width: 16, alignment: .leading)
+        HStack {
+            Text("\(preset.index):")
+                .frame(width: 16, alignment: .leading)
 
-                if let heightMM = preset.heightMM {
-                    Text(HeightConverter.display(mm: heightMM, unit: unit))
-                        .font(.body)
-                } else {
-                    Text("—")
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer()
-
-                Button("Save current", action: onSave)
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+            if let heightMM = preset.heightMM {
+                Text(HeightConverter.display(mm: heightMM, unit: unit))
+                    .font(.body)
+            } else {
+                Text("—")
+                    .foregroundColor(.secondary)
             }
 
-            TextField("Label", text: $labelText)
-                .textFieldStyle(.roundedBorder)
-                .font(.caption)
-                .onAppear { labelText = preset.label ?? "" }
-                .onSubmit { onLabelChange(labelText) }
-                .onChange(of: preset.label) { newValue in
-                    labelText = newValue ?? ""
-                }
+            Spacer()
+
+            Button("Save current", action: onSave)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
         }
     }
 }
