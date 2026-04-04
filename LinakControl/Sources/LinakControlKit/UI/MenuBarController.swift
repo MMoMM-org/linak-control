@@ -40,8 +40,9 @@ public final class MenuBarController: NSObject {
     /// without having to find and click the (dimmed) menu-bar icon first.
     public func setup(autoOpen: Bool = false) {
         FileLog.debug("setup(autoOpen: \(autoOpen)) isFirstRun=\(viewModel.isFirstRun)", category: "ui")
-        setupZone1()
+        // Zone 2 first — macOS places the first-created status item rightmost.
         setupZone2()
+        setupZone1()
         startObservingViewModel()
 
         if autoOpen {
