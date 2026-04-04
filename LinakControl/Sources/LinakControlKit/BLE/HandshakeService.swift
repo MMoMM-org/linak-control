@@ -153,22 +153,23 @@ private func activateDPGSession(
     }
 
     // DPG1C requires byte 0 of user data to be 0x01.
-    if userData.isEmpty {
-        userData = Data([0x01])
-    } else if userData[0] != 0x01 {
-        userData[0] = 0x01
+    // Only write back if modification is needed — writing back when byte 0
+    // is already 0x01 causes the desk to reject with 0x0B error response,
+    // which can disrupt the DPG session.
+    if !userData.isEmpty && userData[0] == 0x01 {
+        FileLog.debug("handshake: USER_ID byte 0 already 0x01, skipping write-back", category: "handshake")
+    } else {
+        if userData.isEmpty {
+            userData = Data([0x01])
+        } else {
+            userData[0] = 0x01
+        }
+        let setCommand = DeskCommand.setUserID(userData: userData)
+        FileLog.debug("handshake: USER_ID write: \(setCommand.count) bytes", category: "handshake")
+        try await bleController.write(data: setCommand, to: DeskUUID.dpg, type: .withResponse)
+        let writeResponse = try await buffer.next()
+        FileLog.debug("handshake: USER_ID write response: \(writeResponse.count) bytes, byte0=\(writeResponse.first.map { String(format: "%02x", $0) } ?? "n/a")", category: "handshake")
     }
-
-    // Always write USER_ID back to activate the motor control session.
-    // Just reading USER_ID activates DPG queries, but the write-back is
-    // needed for the desk to accept movement commands via Reference Input.
-    // Skipping the write-back when byte 0 was already 0x01 left the motor
-    // controller inactive after fresh pairing.
-    let setCommand = DeskCommand.setUserID(userData: userData)
-    FileLog.debug("handshake: USER_ID write: \(setCommand.count) bytes", category: "handshake")
-    try await bleController.write(data: setCommand, to: DeskUUID.dpg, type: .withResponse)
-    let writeResponse = try await buffer.next()
-    FileLog.debug("handshake: USER_ID write response: \(writeResponse.count) bytes, byte0=\(writeResponse.first.map { String(format: "%02x", $0) } ?? "n/a")", category: "handshake")
 
     return baseOffsetMM
 }
