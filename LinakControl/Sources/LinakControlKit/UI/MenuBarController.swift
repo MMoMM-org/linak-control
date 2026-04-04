@@ -22,6 +22,7 @@ public final class MenuBarController: NSObject {
     private var zone2StatusItem: NSStatusItem?
     private var popover: NSPopover?
     private let viewModel: DeskViewModel
+    private var lastZone2Title: String = ""
     private var cancellable: AnyCancellable?
 
     // MARK: - Init
@@ -134,18 +135,22 @@ public final class MenuBarController: NSObject {
         guard let item = zone2StatusItem else { return }
         if viewModel.showZone2 {
             item.length = NSStatusItem.variableLength
-            item.button?.title = zone2Title()
             item.button?.action = #selector(showPresetMenu)
+            // Title is set by updateZone2Title() — no duplicate here.
         } else {
             item.length = 0
             item.button?.title = ""
             item.button?.action = nil
+            lastZone2Title = ""
         }
     }
 
     private func updateZone2Title() {
         guard viewModel.showZone2 else { return }
-        zone2StatusItem?.button?.title = zone2Title()
+        let title = zone2Title()
+        guard title != lastZone2Title else { return }
+        lastZone2Title = title
+        zone2StatusItem?.button?.title = title
     }
 
     private func updatePopoverBehavior() {

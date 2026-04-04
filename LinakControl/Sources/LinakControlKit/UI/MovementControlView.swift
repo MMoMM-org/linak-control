@@ -94,6 +94,14 @@ private struct MovementButton: View {
         return 1.0
     }
 
+    private var accessibilityLabel: String {
+        isMovingThisDirection ? "Stop" : (direction == .up ? "Move up" : "Move down")
+    }
+
+    private var accessibilityValue: String {
+        isMovingThisDirection ? "Moving" : "Ready"
+    }
+
     // MARK: Auto mode button
 
     private var autoButton: some View {
@@ -107,6 +115,8 @@ private struct MovementButton: View {
         .buttonStyle(.bordered)
         .disabled(!isConnected || isOppositeMoving)
         .frame(minWidth: 64)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(accessibilityValue)
     }
 
     // MARK: Manual mode button
@@ -119,6 +129,8 @@ private struct MovementButton: View {
         .buttonStyle(.bordered)
         .frame(minWidth: 64)
         .disabled(!isConnected || isOppositeMoving)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(accessibilityValue)
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in
