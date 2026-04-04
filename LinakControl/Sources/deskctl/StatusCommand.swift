@@ -45,7 +45,8 @@ struct StatusCommand: ParsableCommand {
         return presets.map { preset in
             let height = preset.heightMM.map { String(format: "%.1f", Double($0) / 10) } ?? "?"
             let marker = (preset.index == active) ? "*" : ""
-            return "\(preset.index)=\(height)\(unit)\(marker)"
+            let name = preset.label.map { " \($0)" } ?? ""
+            return "\(preset.index)=\(height)\(unit)\(marker)\(name)"
         }.joined(separator: "  ")
     }
 

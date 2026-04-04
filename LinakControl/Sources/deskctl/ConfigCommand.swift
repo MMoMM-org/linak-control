@@ -12,6 +12,7 @@ struct ConfigCommand: ParsableCommand {
         subcommands: [
             ConfigShowCommand.self,
             ConfigResetCommand.self,
+            ConfigLabelCommand.self,
         ]
     )
 }
@@ -59,5 +60,52 @@ struct ConfigResetCommand: ParsableCommand {
         let store = ConfigStore()
         try store.save(.default)
         print("Configuration reset to defaults.")
+    }
+}
+
+// MARK: - deskctl config label
+
+struct ConfigLabelCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "label",
+        abstract: "Set or clear a preset label.",
+        discussion: """
+        Examples:
+          deskctl config label 1 Sitting
+          deskctl config label 2 Standing
+          deskctl config label 3 --clear
+        """
+    )
+
+    @Argument(help: "Preset index (1-4).")
+    var index: Int
+
+    @Argument(help: "Label text. Omit to show current label.")
+    var text: String?
+
+    @Flag(name: .long, help: "Remove the label for this preset.")
+    var clear: Bool = false
+
+    func run() throws {
+        guard (1...4).contains(index) else {
+            print("Error: preset index must be 1-4.")
+            throw ExitCode.failure
+        }
+
+        let store = ConfigStore()
+        var config = (try? store.load()) ?? .default
+
+        if clear {
+            config.presetLabels[index - 1] = nil
+            try store.save(config)
+            print("Preset \(index) label cleared.")
+        } else if let text {
+            config.presetLabels[index - 1] = text
+            try store.save(config)
+            print("Preset \(index) label set to \"\(text)\".")
+        } else {
+            let label = config.presetLabels[index - 1] ?? "(none)"
+            print("Preset \(index): \(label)")
+        }
     }
 }
