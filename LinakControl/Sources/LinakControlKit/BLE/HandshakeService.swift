@@ -84,8 +84,8 @@ public func performHandshake(using bleController: any BLEControllerProtocol) asy
     FileLog.debug("handshake: step 3 -- activating DPG session (USER_ID init)", category: "handshake")
     let dpgStream = bleController.notifications(for: DeskUUID.dpg)
     let notificationBuffer = TimedStreamBuffer(stream: dpgStream)
-    let baseOffsetMM = try await activateDPGSession(using: bleController, buffer: notificationBuffer)
-    FileLog.debug("handshake: step 3 -- DPG session activated, baseOffset=\(baseOffsetMM.map(String.init) ?? "nil")mm", category: "handshake")
+    try await activateDPGSession(using: bleController, buffer: notificationBuffer)
+    FileLog.debug("handshake: step 3 -- DPG session activated", category: "handshake")
 
     // Step 4: Issue DPG queries and collect responses
     FileLog.debug("handshake: step 4 -- issuing \(dpgQueries.count) DPG queries", category: "handshake")
@@ -94,7 +94,8 @@ public func performHandshake(using bleController: any BLEControllerProtocol) asy
 
     // Step 5: Parse results
     let capabilities = try parseCapabilitiesOrThrow(from: dpgResponses)
-    let deskOffsetMM = baseOffsetMM
+    // dpgResponses[1] is GET_BASE_OFFSET (0x81) — parse offset from there.
+    let deskOffsetMM = parseBaseOffset(from: dpgResponses)
     let presetHeights = parsePresetHeights(from: dpgResponses)
 
     // Read current height directly from the characteristic. This avoids
@@ -132,13 +133,12 @@ private func enableNotifications(using bleController: any BLEControllerProtocol)
 private func activateDPGSession(
     using bleController: any BLEControllerProtocol,
     buffer: TimedStreamBuffer
-) async throws -> Int? {
-    // Read current USER_ID
+) async throws {
+    // Read current USER_ID (DPG cmd 0x86)
     FileLog.debug("handshake: USER_ID read", category: "handshake")
     try await bleController.write(data: DeskCommand.getUserID, to: DeskUUID.dpg, type: .withResponse)
     let userIdResponse = try await buffer.next()
-    let baseOffsetMM = DeskProtocol.parseBaseOffset(fromUserID: userIdResponse)
-    FileLog.debug("handshake: USER_ID response: \(userIdResponse.count) bytes, byte0=\(userIdResponse.first.map { String(format: "%02x", $0) } ?? "n/a"), baseOffset=\(baseOffsetMM.map(String.init) ?? "nil")mm", category: "handshake")
+    FileLog.debug("handshake: USER_ID response: \(userIdResponse.count) bytes, byte0=\(userIdResponse.first.map { String(format: "%02x", $0) } ?? "n/a")", category: "handshake")
 
     // Build the user data payload for the write-back.
     // DPG response format: [status, length, ...payload].
@@ -171,7 +171,6 @@ private func activateDPGSession(
         FileLog.debug("handshake: USER_ID write response: \(writeResponse.count) bytes, byte0=\(writeResponse.first.map { String(format: "%02x", $0) } ?? "n/a")", category: "handshake")
     }
 
-    return baseOffsetMM
 }
 
 private func issueDPGQueries(
@@ -200,6 +199,12 @@ private func parseCapabilitiesOrThrow(from responses: [Data]) throws -> DeskCapa
         throw DeskError.invalidResponse
     }
     return capabilities
+}
+
+private func parseBaseOffset(from responses: [Data]) -> Int? {
+    // responses[1] is the GET_BASE_OFFSET (0x81) response
+    guard responses.count > 1 else { return nil }
+    return DeskProtocol.parseBaseOffset(fromUserID: responses[1])
 }
 
 private func parseDeskOffset(from responses: [Data]) -> Int? {
