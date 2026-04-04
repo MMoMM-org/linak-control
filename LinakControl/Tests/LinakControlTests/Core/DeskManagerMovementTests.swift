@@ -203,7 +203,8 @@ final class DeskManagerAutoUpTests: XCTestCase {
         let postWrites = Array(mock.writtenData.dropFirst(priorCount))
             .filter { $0.characteristic == DeskUUID.command }
         XCTAssertGreaterThanOrEqual(postWrites.count, 1, "Need at least preflight")
-        XCTAssertEqual(postWrites[0].data, DeskCommand.preflight, "First command must be preflight")
+        XCTAssertEqual(postWrites[0].data, DeskCommand.wakeUp, "First command must be wakeUp")
+        XCTAssertEqual(postWrites[1].data, DeskCommand.preflight, "Second command must be preflight")
     }
 
     func testAutoUpSendsMoveToMaxHeightRepeatedly() async throws {
@@ -237,7 +238,8 @@ final class DeskManagerAutoDownTests: XCTestCase {
         let postWrites = Array(mock.writtenData.dropFirst(priorCount))
             .filter { $0.characteristic == DeskUUID.command }
         XCTAssertGreaterThanOrEqual(postWrites.count, 1, "Need at least preflight")
-        XCTAssertEqual(postWrites[0].data, DeskCommand.preflight, "First command must be preflight")
+        XCTAssertEqual(postWrites[0].data, DeskCommand.wakeUp, "First command must be wakeUp")
+        XCTAssertEqual(postWrites[1].data, DeskCommand.preflight, "Second command must be preflight")
     }
 
     func testAutoDownSendsMoveToMinHeightRepeatedly() async throws {

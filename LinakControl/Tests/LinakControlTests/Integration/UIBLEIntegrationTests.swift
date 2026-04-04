@@ -81,10 +81,11 @@ final class UIBLEPresetSwitchTests: XCTestCase {
 
         let newWrites = Array(harness.mock.writtenData.dropFirst(priorWriteCount))
 
-        // Preflight must be the first command write.
+        // WakeUp then preflight must be the first two command writes.
         let cmdWrites = newWrites.filter { $0.characteristic == DeskUUID.command }
-        XCTAssertGreaterThanOrEqual(cmdWrites.count, 1, "Need at least preflight")
-        XCTAssertEqual(cmdWrites[0].data, DeskCommand.preflight, "First must be preflight")
+        XCTAssertGreaterThanOrEqual(cmdWrites.count, 2, "Need at least wakeUp + preflight")
+        XCTAssertEqual(cmdWrites[0].data, DeskCommand.wakeUp, "First must be wakeUp")
+        XCTAssertEqual(cmdWrites[1].data, DeskCommand.preflight, "Second must be preflight")
 
         // At least one heartbeat targeting 1105mm must have been sent.
         let expectedTarget = DeskCommand.moveTo(tenthsOfMm: UInt16(1105 * 10))

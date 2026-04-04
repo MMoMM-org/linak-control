@@ -66,7 +66,8 @@ final class DeskManagerPresetHappyPathTests: XCTestCase {
         let postWrites = Array(setup.mock.writtenData.dropFirst(priorCount))
             .filter { $0.characteristic == DeskUUID.command }
         XCTAssertGreaterThanOrEqual(postWrites.count, 1, "Need at least preflight")
-        XCTAssertEqual(postWrites[0].data, DeskCommand.preflight, "First must be preflight")
+        XCTAssertEqual(postWrites[0].data, DeskCommand.wakeUp, "First must be wakeUp")
+        XCTAssertEqual(postWrites[1].data, DeskCommand.preflight, "Second must be preflight")
     }
 
     func testGoToPresetSendsMoveToTargetRepeatedly() async throws {

@@ -51,7 +51,9 @@ enum HandshakeFixtures {
     // Response layout: [status, length, ...userIdPayload]
     // Byte 0 of payload must be 0x01 for DPG1C.
 
-    static let userID = Data([0x01, 0x03, 0x01, 0x90, 0x1A])
+    // Offset bytes [3:4] set to zero so tests don't get an auto-detected offset.
+    // Production USER_ID has a real offset (e.g. 0x1A90 = 680mm).
+    static let userID = Data([0x01, 0x03, 0x01, 0x00, 0x00])
 
     // MARK: USER_ID write acknowledgement
 
