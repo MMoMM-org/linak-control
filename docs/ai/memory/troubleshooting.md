@@ -1,5 +1,16 @@
 # Troubleshooting -- linak-control
-<!-- Known issues and proven fixes. Updated: 2026-04-02 -->
+<!-- Known issues and proven fixes. Updated: 2026-04-08 -->
+
+<!-- 2026-04-08 -->
+## Movement button icon no feedback during auto-move -- Status: resolved
+UP/DOWN button showed static icon while desk auto-moved to preset, leaving user without visual cue to stop. Fix: swap icon to STOP during active movement (commit 9e44e03).
+
+## Hold mode kept moving after button release -- Status: resolved
+In hold mode, pressing UP/DOWN started movement but release did not stop it -- user had to hit stop button. Root cause: hold-button logic was shared with auto-preset flow where continued movement is correct. Fix: manual hold release stops movement; auto mode remains latched (commit 86b752e).
+
+## Auto mode UP key triggered DOWN movement -- Status: resolved
+Auto-up target calculation overflowed, causing the UP key to move the desk down. Fix: clamp auto-up target to valid range (commit 86b752e).
+
 
 ## USER_ID corruption -- Status: resolved
 Writing incorrect USER_ID data back to the desk corrupted its user profile, resetting calibration/offset to 0. Fix: skip write-back when byte 0 is already 0x01. If corrupted, use the LINAK Desk Control iOS app to repair the desk's user profile.
