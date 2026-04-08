@@ -1,5 +1,5 @@
 # Context -- linak-control
-<!-- Current sprint focus, active work, known blockers. Updated: 2026-04-02 -->
+<!-- Current sprint focus, active work, known blockers. Updated: 2026-04-08 -->
 
 ## Current State
 
@@ -22,11 +22,16 @@ Feature branch `feat/linak-control-impl` has 65+ commits. Full implementation of
 
 ## Next Steps
 
-- Fix flaky movement tests (inject TestClock)
-- Investigate correct base offset parsing from USER_ID or DESK_OFFSET response
-- Consider PR to main
+- Fix 5 flaky movement tests (inject TestClock instead of real Task.sleep)
+- Investigate correct base offset auto-parse — GET_DESK_OFFSET returns wrong value (1413mm); check if GET_BASE_OFFSET (0x81) gives the right one (currently set manually by user)
 
 ## Feature Backlog
 
 - Configurable hotkeys (currently hardcoded Ctrl+Opt+1-4/Up/Down in HotkeyManager.swift)
-- Option to hide Zone 2 (preset dropdown in menu bar) via Settings toggle
+
+## Done (recent)
+
+- 2026-04-08: feat-branch merged into main (fast-forward, 87 commits)
+- 2026-04-08: MIT LICENSE + THIRD_PARTY_LICENSES.md added; README updated
+- 2026-04-08: untracked claude-docker/, claude-docker-home/, begin-code.sh from git (local-only infra)
+- Zone 2 toggle in Settings (commit 66486ad)
