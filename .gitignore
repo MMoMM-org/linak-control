@@ -1,6 +1,7 @@
 # Local Claude Code Docker environment — not relevant to consumers of this repo
 claude-docker/
 claude-docker-home/
+begin-code.sh
 
 # Xcode user-specific data — project files are tracked, user state is not
 LinakControl.xcodeproj/xcuserdata/
