@@ -1,7 +1,6 @@
-claude-docker-home/.home-initialized
-claude-docker-home/.claude.json
-claude-docker-home/.claude/
-claude-docker-home/.bash_history
+# Local Claude Code Docker environment — not relevant to consumers of this repo
+claude-docker/
+claude-docker-home/
 
 # Xcode user-specific data — project files are tracked, user state is not
 LinakControl.xcodeproj/xcuserdata/
