@@ -119,4 +119,6 @@ See [docs/spec.md](docs/spec.md) for the full project specification.
 
 ## License
 
-Personal use. Not distributed via App Store.
+Released under the [MIT License](LICENSE) © 2026 Marcus Breiden.
+
+Third-party dependencies and protocol attributions are listed in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
