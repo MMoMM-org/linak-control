@@ -8,6 +8,24 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_NAME="LinakControl"
 INSTALL_DIR="${1:-/Applications}"
 
+# Preflight: required build tools
+for tool in xcodebuild xcodegen; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+        case "$tool" in
+            xcodebuild) echo "Error: xcodebuild not found. Install Xcode (or run: xcode-select --install)." ;;
+            xcodegen)   echo "Error: xcodegen not found. Install with: brew install xcodegen" ;;
+        esac
+        exit 1
+    fi
+done
+
+# Stop any running instance so the reinstall is clean
+if pgrep -xq "$APP_NAME"; then
+    echo "Stopping running $APP_NAME..."
+    killall "$APP_NAME" 2>/dev/null || true
+    sleep 0.5
+fi
+
 echo "Building $APP_NAME (release)..."
 cd "$SCRIPT_DIR"
 make xcode-build 2>&1 | tail -5
@@ -45,8 +63,9 @@ if [ -f "$DESKCTL_SRC" ]; then
 fi
 
 echo ""
-echo "Done. Launch with:"
-echo "  open $INSTALL_DIR/$APP_NAME.app"
+echo "Launching $INSTALL_DIR/$APP_NAME.app..."
+open "$INSTALL_DIR/$APP_NAME.app"
+
 echo ""
 echo "CLI commands:"
 echo "  deskctl status        — Show desk status"
