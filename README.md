@@ -35,6 +35,23 @@ macOS menu bar app and CLI for controlling LINAK DPG1C standing desks via Blueto
 
 On first launch, the app scans for nearby LINAK desks. Select your desk to pair. The desk's Bluetooth controller LED should be in pairing mode (blue).
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/menubar-popover.png" alt="Menu bar popover" width="320">
+  <img src="docs/screenshots/menubar-preset-menu.png" alt="Preset menu" width="320">
+</p>
+
+Regenerate from a clean state with the desk powered on and paired:
+
+```bash
+./scripts/take-screenshots.sh
+```
+
+This runs the `LinakControlUITests` XCUITest target, which opens each menu bar zone and captures `XCTAttachment` screenshots. The script extracts the attachments from the result bundle and writes PNGs into `docs/screenshots/`.
+
+The first run will prompt for **Accessibility permission** for the XCUITest runner (System Settings → Privacy & Security → Accessibility). Grant it once; subsequent runs are silent.
+
 ## Install
 
 ```bash

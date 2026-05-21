@@ -64,6 +64,7 @@ public final class MenuBarController: NSObject {
         item.button?.alphaValue = viewModel.connectionState == .connected ? 1.0 : 0.7
         item.button?.action = #selector(togglePopover)
         item.button?.target = self
+        item.button?.setAccessibilityIdentifier("linak.menubar.zone1.icon")
         zone1StatusItem = item
 
         let hosting = NSPopover()
@@ -97,6 +98,7 @@ public final class MenuBarController: NSObject {
         item.button?.title = zone2Title()
         item.button?.action = #selector(showPresetMenu)
         item.button?.target = self
+        item.button?.setAccessibilityIdentifier("linak.menubar.zone2.text")
         zone2StatusItem = item
     }
 

@@ -10,11 +10,24 @@
 		4999AB9EA6BA9A06362C3322 /* LinakControlApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BEF2034E69BFC9442A5962 /* LinakControlApp.swift */; };
 		79DDC113E0B0C1B42716A1A1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8E4AAFF3D1117E8B3DEE842F /* Assets.xcassets */; };
 		B55D9B6426996B6C6CEA7E29 /* LinakControlKit in Frameworks */ = {isa = PBXBuildFile; productRef = A6A01FC53D7E8954B227568E /* LinakControlKit */; };
+		E2BC16EE7FE7551C4FFDFC36 /* LinakControlScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB9F58DBA4EB7550D1944663 /* LinakControlScreenshotTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		F56B3F8B59DFBE2FA2DAAD3E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = ABE1F64B8FF6873A3DC09FE8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F0988E21082FF3DD3EC5DE60;
+			remoteInfo = LinakControl;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		8E4AAFF3D1117E8B3DEE842F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9EBA3FE495B01725A47137F9 /* LinakControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LinakControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		ADD823CEEC55C36D552884CC /* LinakControlUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LinakControlUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CB9F58DBA4EB7550D1944663 /* LinakControlScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinakControlScreenshotTests.swift; sourceTree = "<group>"; };
 		D3BEF2034E69BFC9442A5962 /* LinakControlApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinakControlApp.swift; sourceTree = "<group>"; };
 		ED13E1846412DED103D8CD8F /* LinakControl */ = {isa = PBXFileReference; lastKnownFileType = folder; name = LinakControl; path = LinakControl; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -65,10 +78,19 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		98840515125DAE2CF40A16A5 /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				CB9F58DBA4EB7550D1944663 /* LinakControlScreenshotTests.swift */,
+			);
+			path = UITests;
+			sourceTree = "<group>";
+		};
 		A44B9F5D1B343BF797D415F9 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
 				7F3249459CDFCE04E762415B /* App */,
+				98840515125DAE2CF40A16A5 /* UITests */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -77,6 +99,7 @@
 			isa = PBXGroup;
 			children = (
 				9EBA3FE495B01725A47137F9 /* LinakControl.app */,
+				ADD823CEEC55C36D552884CC /* LinakControlUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -84,6 +107,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		98E20F689CD48B9A0D6577AA /* LinakControlUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2C3CDF85C6192CAEC0854380 /* Build configuration list for PBXNativeTarget "LinakControlUITests" */;
+			buildPhases = (
+				67F359A9C6A41858C6F6A6AA /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				EDDF2E4F379C6515569E3430 /* PBXTargetDependency */,
+			);
+			name = LinakControlUITests;
+			packageProductDependencies = (
+			);
+			productName = LinakControlUITests;
+			productReference = ADD823CEEC55C36D552884CC /* LinakControlUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		F0988E21082FF3DD3EC5DE60 /* LinakControl */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0A82B42A4E40D60121936571 /* Build configuration list for PBXNativeTarget "LinakControl" */;
@@ -113,6 +154,11 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					98E20F689CD48B9A0D6577AA = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Manual;
+						TestTargetID = F0988E21082FF3DD3EC5DE60;
+					};
 					F0988E21082FF3DD3EC5DE60 = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Manual;
@@ -136,6 +182,7 @@
 			projectRoot = "";
 			targets = (
 				F0988E21082FF3DD3EC5DE60 /* LinakControl */,
+				98E20F689CD48B9A0D6577AA /* LinakControlUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -160,7 +207,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		67F359A9C6A41858C6F6A6AA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E2BC16EE7FE7551C4FFDFC36 /* LinakControlScreenshotTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		EDDF2E4F379C6515569E3430 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F0988E21082FF3DD3EC5DE60 /* LinakControl */;
+			targetProxy = F56B3F8B59DFBE2FA2DAAD3E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		3D0A5710D91FB95651C3AD62 /* Release */ = {
@@ -304,6 +367,28 @@
 			};
 			name = Debug;
 		};
+		783FBF15D0A1EAEC55D123A1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.marcusbreiden.LinakControlUITests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.9;
+				TEST_TARGET_NAME = LinakControl;
+			};
+			name = Release;
+		};
 		80BBB5DFBB53071FD525F1B8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -326,6 +411,28 @@
 			};
 			name = Release;
 		};
+		E26A8D840CE973C0F9CC4C11 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.marcusbreiden.LinakControlUITests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.9;
+				TEST_TARGET_NAME = LinakControl;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -334,6 +441,15 @@
 			buildConfigurations = (
 				69F42F41B7B68118CFEDE762 /* Debug */,
 				80BBB5DFBB53071FD525F1B8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		2C3CDF85C6192CAEC0854380 /* Build configuration list for PBXNativeTarget "LinakControlUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E26A8D840CE973C0F9CC4C11 /* Debug */,
+				783FBF15D0A1EAEC55D123A1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

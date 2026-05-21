@@ -57,12 +57,36 @@ targets:
         INFOPLIST_FILE: LinakControl/Sources/App/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
+  LinakControlUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: LinakControl/Sources/UITests
+    dependencies:
+      - target: LinakControl
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.marcusbreiden.LinakControlUITests
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        SWIFT_VERSION: "5.9"
+        TEST_TARGET_NAME: LinakControl
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: ""
+        GENERATE_INFOPLIST_FILE: YES
+
 schemes:
   LinakControlApp:
     build:
       targets:
         LinakControl: all
+        LinakControlUITests: [test]
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - LinakControlUITests
     archive:
       config: Release
