@@ -66,6 +66,7 @@ private struct SettingsHeaderView: View {
             }
             .buttonStyle(.plain)
             .foregroundColor(.accentColor)
+            .accessibilityIdentifier("linak.settings.back")
 
             Spacer()
 

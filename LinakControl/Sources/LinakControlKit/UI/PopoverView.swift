@@ -142,6 +142,7 @@ private struct FooterView: View {
             }
             .buttonStyle(.plain)
             .foregroundColor(.secondary)
+            .accessibilityIdentifier("linak.popover.settings.gear")
         }
         .padding(.top, 4)
     }

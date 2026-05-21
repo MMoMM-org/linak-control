@@ -11,3 +11,7 @@ LinakControl.xcworkspace/xcuserdata/
 # Xcode build intermediates at project root
 build/
 LinakControl/.build/
+/.build/
+.mcp.json
+/generated-images/
+.DS_Store

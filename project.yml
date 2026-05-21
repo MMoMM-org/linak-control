@@ -70,7 +70,10 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.marcusbreiden.LinakControlUITests
         MACOSX_DEPLOYMENT_TARGET: "13.0"
         SWIFT_VERSION: "5.9"
-        TEST_TARGET_NAME: LinakControl
+        # Intentionally no TEST_TARGET_NAME: xcodebuild's preflight tries to
+        # read it as a bare binary path (.../Debug/LinakControl) and fails
+        # because our product is LinakControl.app. The test launches the
+        # installed app via XCUIApplication(url:) — no host-app lookup needed.
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_STYLE: Manual
         DEVELOPMENT_TEAM: ""

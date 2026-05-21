@@ -37,18 +37,33 @@ On first launch, the app scans for nearby LINAK desks. Select your desk to pair.
 
 ## Screenshots
 
+Both menu bar zones in context:
+
 <p align="center">
-  <img src="docs/screenshots/menubar-popover.png" alt="Menu bar popover" width="320">
-  <img src="docs/screenshots/menubar-preset-menu.png" alt="Preset menu" width="320">
+  <img src="docs/screenshots/menubar.png" alt="Menu bar zones">
 </p>
 
-Regenerate from a clean state with the desk powered on and paired:
+Popover (zone 1) and preset menu (zone 2):
+
+<p align="center">
+  <img src="docs/screenshots/menubar-popover.png" alt="Menu bar popover" width="320">
+  <img src="docs/screenshots/menubar-preset-menu.png" alt="Preset menu" width="180" valign="top">
+</p>
+
+Settings (top and scrolled):
+
+<p align="center">
+  <img src="docs/screenshots/settings.png" alt="Settings view" width="300">
+  <img src="docs/screenshots/settings-scrolled.png" alt="Settings view scrolled" width="300">
+</p>
+
+Regenerate from a clean state with `/Applications/LinakControl.app` installed (`./install.sh`), the desk powered on and paired, and the app running:
 
 ```bash
 ./scripts/take-screenshots.sh
 ```
 
-This runs the `LinakControlUITests` XCUITest target, which opens each menu bar zone and captures `XCTAttachment` screenshots. The script extracts the attachments from the result bundle and writes PNGs into `docs/screenshots/`.
+This runs the `LinakControlUITests` XCUITest target which drives the installed app, captures full-screen shots, crops them to each UI region, and writes the PNGs into `docs/screenshots/`. Captured shots: `menubar`, `menubar-popover`, `menubar-preset-menu`, `settings`, `settings-scrolled`.
 
 The first run will prompt for **Accessibility permission** for the XCUITest runner (System Settings → Privacy & Security → Accessibility). Grant it once; subsequent runs are silent.
 
