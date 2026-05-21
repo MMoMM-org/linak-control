@@ -8,10 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		4999AB9EA6BA9A06362C3322 /* LinakControlApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BEF2034E69BFC9442A5962 /* LinakControlApp.swift */; };
+		79DDC113E0B0C1B42716A1A1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8E4AAFF3D1117E8B3DEE842F /* Assets.xcassets */; };
 		B55D9B6426996B6C6CEA7E29 /* LinakControlKit in Frameworks */ = {isa = PBXBuildFile; productRef = A6A01FC53D7E8954B227568E /* LinakControlKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		8E4AAFF3D1117E8B3DEE842F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9EBA3FE495B01725A47137F9 /* LinakControl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LinakControl.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D3BEF2034E69BFC9442A5962 /* LinakControlApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinakControlApp.swift; sourceTree = "<group>"; };
 		ED13E1846412DED103D8CD8F /* LinakControl */ = {isa = PBXFileReference; lastKnownFileType = folder; name = LinakControl; path = LinakControl; sourceTree = SOURCE_ROOT; };
@@ -57,6 +59,7 @@
 		7F3249459CDFCE04E762415B /* App */ = {
 			isa = PBXGroup;
 			children = (
+				8E4AAFF3D1117E8B3DEE842F /* Assets.xcassets */,
 				D3BEF2034E69BFC9442A5962 /* LinakControlApp.swift */,
 			);
 			path = App;
@@ -86,6 +89,7 @@
 			buildConfigurationList = 0A82B42A4E40D60121936571 /* Build configuration list for PBXNativeTarget "LinakControl" */;
 			buildPhases = (
 				2D605896CFFB5BCA5CB532EB /* Sources */,
+				1E93BB2F025A6D009FE86D91 /* Resources */,
 				DA54F62D68D499EF08B57C26 /* Frameworks */,
 			);
 			buildRules = (
@@ -135,6 +139,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1E93BB2F025A6D009FE86D91 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				79DDC113E0B0C1B42716A1A1 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		2D605896CFFB5BCA5CB532EB /* Sources */ = {

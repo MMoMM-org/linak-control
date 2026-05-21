@@ -55,6 +55,7 @@ targets:
         # Use the Info.plist from the SPM source tree — do not generate one
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: LinakControl/Sources/App/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
 schemes:
   LinakControlApp:
