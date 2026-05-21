@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/linak-control-gh-logo.png" alt="linak-control" width="600">
+</p>
+
 # linak-control
 
 macOS menu bar app and CLI for controlling LINAK DPG1C standing desks via Bluetooth Low Energy.
@@ -30,6 +34,18 @@ macOS menu bar app and CLI for controlling LINAK DPG1C standing desks via Blueto
 ```
 
 On first launch, the app scans for nearby LINAK desks. Select your desk to pair. The desk's Bluetooth controller LED should be in pairing mode (blue).
+
+## Install
+
+```bash
+# Build release, install LinakControl.app to /Applications, install deskctl to /usr/local/bin, then launch
+./install.sh
+
+# Install into a custom location instead of /Applications
+./install.sh ~/Applications
+```
+
+The script stops any running instance, regenerates the Xcode project, builds a Release `.app`, installs the CLI (`deskctl`, may prompt for sudo for `/usr/local/bin`), and opens the app so you can confirm the menu bar icon appears. It refuses to run if `xcodebuild` or `xcodegen` are missing and tells you how to install them.
 
 ## Build
 
