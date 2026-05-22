@@ -165,6 +165,16 @@ The BLE protocol implementation is based on reverse-engineering work from these 
 
 See [docs/spec.md](docs/spec.md) for the full project specification.
 
+<!-- doc-product:documentation:start -->
+## Documentation
+
+- [Installation](docs/installation.md)
+- [Configuration](docs/configuration.md)
+- [Usage](docs/usage.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Linak DPG1C macOS Desk Control -- Specification](docs/spec.md)
+<!-- doc-product:documentation:end -->
+
 ## License
 
 Released under the [MIT License](LICENSE) © 2026 Marcus Breiden.
