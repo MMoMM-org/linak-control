@@ -18,10 +18,7 @@ macOS menu bar app and CLI for controlling LINAK DPG1C standing desks via Blueto
 
 ## Requirements
 
-- macOS 14+ (Sonoma)
-- Xcode 15+ with Swift 5.9
-- [xcodegen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
-- A LINAK DPG1C-compatible desk with Bluetooth controller
+macOS 14+ with full Xcode 15+ (Swift 5.9) and [xcodegen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`), plus a LINAK DPG1C-compatible desk. See [docs/installation.md#prerequisites](docs/installation.md#prerequisites) for the full breakdown.
 
 ## Quick Start
 
@@ -70,14 +67,11 @@ The first run will prompt for **Accessibility permission** for the XCUITest runn
 ## Install
 
 ```bash
-# Build release, install LinakControl.app to /Applications, install deskctl to /usr/local/bin, then launch
-./install.sh
-
-# Install into a custom location instead of /Applications
-./install.sh ~/Applications
+./install.sh                  # release app → /Applications, deskctl → /usr/local/bin, then launch
+./install.sh ~/Applications   # custom app location
 ```
 
-The script stops any running instance, regenerates the Xcode project, builds a Release `.app`, installs the CLI (`deskctl`, may prompt for sudo for `/usr/local/bin`), and opens the app so you can confirm the menu bar icon appears. It refuses to run if `xcodebuild` or `xcodegen` are missing and tells you how to install them.
+`install.sh` stops any running instance, rebuilds Release, installs both binaries (may prompt for `sudo`), and opens the app. See [docs/installation.md](docs/installation.md) for the full prerequisites/install/verify/updating flow.
 
 ## Build
 
@@ -120,25 +114,11 @@ LinakControl/
 
 ## Configuration
 
-Settings are stored in `~/Library/Application Support/LinakControl/config.json`:
-
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `desk_offset_mm` | Base height offset in mm (lowest desk position from floor) | 0 |
-| `unit` | Display unit: `cm` or `inch` | `cm` |
-| `auto_run_up` / `auto_run_down` | Movement mode: `manual` (hold) or `auto` (tap) | `manual` |
-| `start_at_login` | Register as login item | `false` |
-| `hotkeys_enabled` | Global keyboard shortcuts | `false` |
-| `preset_labels` | Optional labels for presets 1-4 | `[null, null, null, null]` |
+Settings live at `~/Library/Application Support/LinakControl/config.json`. The full key reference, override mechanism (UI / `deskctl config` / hand edit), and annotated samples are in [docs/configuration.md](docs/configuration.md).
 
 ## Debug Logging
 
-In debug builds, logs are written to `~/Library/Logs/LinakControl/debug.log`. The file is truncated at app launch and capped at 1 MB. Logs include BLE state changes, handshake steps, movement commands, and UI state transitions.
-
-```bash
-# Watch logs in real-time
-tail -f ~/Library/Logs/LinakControl/debug.log
-```
+Debug builds write to `~/Library/Logs/LinakControl/debug.log` (truncated per launch, 1 MB cap). Release builds write no log file — see [docs/troubleshooting.md#where-to-look-for-logs](docs/troubleshooting.md#where-to-look-for-logs).
 
 ## Protocol Notes
 
