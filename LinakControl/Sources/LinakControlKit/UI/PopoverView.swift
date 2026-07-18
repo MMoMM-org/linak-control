@@ -51,7 +51,7 @@ private struct ConnectedContent: View {
                     .foregroundColor(.secondary)
             }
             if viewModel.needsReference {
-                NeedsReferenceBanner()
+                NeedsReferenceBanner(message: viewModel.faultMessage)
             }
             HeightHeroView(viewModel: viewModel)
             MovementControlView(viewModel: viewModel)
@@ -63,14 +63,17 @@ private struct ConnectedContent: View {
 
 // MARK: - NeedsReferenceBanner
 
-/// Compact warning shown when a movement stalled — the desk stopped responding
-/// and may need a manual reset on the control box (E16 on the display).
+/// Compact warning shown when a movement stalled — the desk stopped responding.
+/// The message is specific to the decoded fault code when the desk pushed one
+/// (E16 = needs reset, E26 = possible leg/cable fault), else generic.
 private struct NeedsReferenceBanner: View {
+    let message: String
+
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundColor(.orange)
-            Text("Desk stopped moving. It may need a manual reset on the control box.")
+            Text(message)
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

@@ -208,3 +208,56 @@ final class ParseDeskOffsetTests: XCTestCase {
     }
 }
 
+
+// MARK: - parseDeskStatus
+
+final class ParseDeskStatusTests: XCTestCase {
+
+    func testE16FaultPulse() {
+        // Captured: E16 on the control box -> [01 00 1e]
+        XCTAssertEqual(DeskProtocol.parseDeskStatus(makeData([0x01, 0x00, 0x1e])), .fault(code: 0x1e))
+    }
+
+    func testE26FaultPulse() {
+        // Captured: E26 on the control box -> [01 00 17]
+        XCTAssertEqual(DeskProtocol.parseDeskStatus(makeData([0x01, 0x00, 0x17])), .fault(code: 0x17))
+    }
+
+    func testInitialiseFaultPulse() {
+        // Captured: control box asking to Initialise -> [01 00 1d]
+        XCTAssertEqual(DeskProtocol.parseDeskStatus(makeData([0x01, 0x00, 0x1d])), .fault(code: 0x1d))
+    }
+
+    func testDescribeAndSummariseInitialiseCode() {
+        XCTAssertTrue(DeskProtocol.describeFault(code: 0x1d).lowercased().contains("initialise"))
+        XCTAssertTrue(DeskProtocol.faultSummary(code: 0x1d).lowercased().contains("re-initialised"))
+    }
+
+    func testEmptyPayloadIsOk() {
+        XCTAssertEqual(DeskProtocol.parseDeskStatus(makeData([])), .ok)
+    }
+
+    func testZeroCodeIsOk() {
+        XCTAssertEqual(DeskProtocol.parseDeskStatus(makeData([0x01, 0x00, 0x00])), .ok)
+    }
+
+    func testShortPayloadIsOk() {
+        XCTAssertEqual(DeskProtocol.parseDeskStatus(makeData([0x01, 0x00])), .ok)
+    }
+
+    func testDescribeFaultKnownCodes() {
+        XCTAssertTrue(DeskProtocol.describeFault(code: 0x1e).contains("E16"))
+        XCTAssertTrue(DeskProtocol.describeFault(code: 0x17).contains("E26"))
+    }
+
+    func testDescribeFaultUnknownCodeIncludesRawHex() {
+        XCTAssertTrue(DeskProtocol.describeFault(code: 0x99).contains("0x99"))
+    }
+
+    func testFaultSummaryDiffersByCode() {
+        XCTAssertNotEqual(
+            DeskProtocol.faultSummary(code: 0x1e),
+            DeskProtocol.faultSummary(code: 0x17)
+        )
+    }
+}

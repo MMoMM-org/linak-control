@@ -39,7 +39,16 @@ struct StatusCommand: ParsableCommand {
             print("  Presets:    \(presetsLabel)")
         }
         if status.needsReference {
-            print("  Warning:    desk stopped moving — may need a manual reset on the control box (E16)")
+            print("  Warning:    \(warningText(faultCode: status.faultCode))")
+        }
+    }
+
+    private func warningText(faultCode: Int?) -> String {
+        switch faultCode {
+        case 0x1d: return "desk needs re-initialisation — hold DOWN until it reaches the bottom and resets (control box shows Initialise)"
+        case 0x1e: return "desk needs a reset on the control box (E16, illegal key combination)"
+        case 0x17: return "possible hardware fault in a desk leg — check the cables (E26, channel 4 missing)"
+        default:   return "desk stopped moving — may need a manual reset on the control box"
         }
     }
 

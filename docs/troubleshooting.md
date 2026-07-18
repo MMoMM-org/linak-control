@@ -62,13 +62,18 @@ The CLI installed somewhere your shell does not search.
 - Default location: `/usr/local/bin/deskctl`. Confirm it is in your `$PATH`.
 - If you used a custom `INSTALL_BIN` with `make install`, add that directory to `$PATH` in your shell profile.
 
-**Desk stops mid-move and the popover warns "Desk stopped moving" (control box shows E16)**
+**Desk stops mid-move and the popover shows a warning (control box shows E16 or E26)**
 
-The desk module sometimes needs to re-reference its height. While it is in that state it refuses to move and shows **E16** on the control box. The app detects that the desk is not moving despite the command, stops sending move commands (so it no longer fights the module), and shows a warning banner plus a macOS notification.
+When a move (manual, auto, or preset recall) does not make the desk move, the app stops sending move commands so it no longer fights the module, and warns you three ways: the **menu bar icon turns into an orange warning triangle** (hover it for the cause), a banner appears in the popover, and a macOS notification is posted. It reacts instantly if the desk reports a fault on its status channel, and otherwise after ~2 seconds of no movement (a timing backstop).
 
-- Re-reference the desk manually on the control box: hold the **down** button until the desk reaches its lowest position and resets (follow your LINAK control box's re-initialisation procedure).
-- Once the module is happy again, movement from the app works normally — the warning clears on your next move.
-- Note: the app also shows this warning if you hold a direction into the desk's physical end-stop (the height stops changing). That is harmless — just release the button.
+The message is specific to what the control box reports:
+
+- **Initialise / re-initialisation required.** The desk lost its position reference and asks to be re-initialised. Hold the **down** button until the desk reaches its lowest position and resets (follow your LINAK control box's initialisation procedure). Movement from the app then works normally — the warning clears on your next move.
+- **E16 — "needs a reset on the control box".** The control box read the Bluetooth move commands as an illegal key combination and stopped. This is not a hardware fault. Re-reference the desk manually as above. 
+- **E26 — "possible hardware fault in a desk leg (check the cables)".** The control box reports channel 4 (a leg motor) as missing. If this recurs, check the motor cable connections to the legs; a persistent E26 points at a cable or motor, not the app.
+- The app also shows a generic "stopped responding" warning if you hold a direction into the desk's **physical end-stop** (the height simply stops changing). That is harmless — just release the button.
+
+The exact bytes the desk reports are recorded in the log under `[status]` (see [Where to look for logs](#where-to-look-for-logs)); include them if you report a movement fault.
 
 **A hand edit to `config.json` was silently undone**
 

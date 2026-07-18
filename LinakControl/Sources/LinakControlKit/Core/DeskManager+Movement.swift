@@ -14,8 +14,37 @@ private let movementInterval: Duration = .milliseconds(100)
 /// How long the desk height may stay unchanged while a movement is commanded
 /// before the loop concludes the desk is not responding and stops. Wide enough
 /// to absorb wake-up, preflight, and acceleration latency at the start of a move.
-private let stallTimeout: Duration = .seconds(2)
+/// Shared by the movement and preset loops (see `StallTracker`).
+let stallTimeout: Duration = .seconds(2)
 // Auto targets defined in DeskLimits (DeskProtocol.swift) — single source of truth.
+
+// MARK: - StallTracker
+
+/// Detects a stalled move: the desk height not changing for `timeout` while a
+/// repeating move command is being sent. Used by both the manual/auto movement
+/// loop and the preset-recall loop so they share one definition of "stalled".
+struct StallTracker {
+    private var lastHeight: Int?
+    private var lastProgressAt: ContinuousClock.Instant
+    private let timeout: Duration
+
+    init(height: Int?, now: ContinuousClock.Instant, timeout: Duration = stallTimeout) {
+        self.lastHeight = height
+        self.lastProgressAt = now
+        self.timeout = timeout
+    }
+
+    /// Feeds the latest observed height and current time; returns true once the
+    /// height has not changed for `timeout`. Any height change resets the window.
+    mutating func isStalled(height: Int?, now: ContinuousClock.Instant) -> Bool {
+        if height != lastHeight {
+            lastHeight = height
+            lastProgressAt = now
+            return false
+        }
+        return lastProgressAt.duration(to: now) >= timeout
+    }
+}
 
 // MARK: - DeskManager movement extension
 
@@ -38,8 +67,9 @@ extension DeskManager {
             $0.moveDirection = direction
             $0.targetPreset = nil
             // Optimistic: a fresh move attempt clears any prior stall flag. The
-            // watchdog re-raises it if the desk still fails to respond.
+            // watchdog / status listener re-raises it if the desk still fails.
             $0.needsReference = false
+            $0.faultCode = nil
         }
 
         switch mode {
@@ -107,8 +137,7 @@ extension DeskManager {
     /// Mirrors `runPresetLoop` (DeskManager+Presets.swift), which already
     /// terminates a repeating move loop on a height/time condition.
     private func runMovementLoop(command: Data, characteristic: CBUUID) async {
-        var lastHeight = state.heightMM
-        var lastProgressAt = clock.now()
+        var tracker = StallTracker(height: state.heightMM, now: clock.now())
 
         while !Task.isCancelled {
             try? await bleController.write(
@@ -118,11 +147,7 @@ extension DeskManager {
             )
             try? await clock.sleep(for: movementInterval)
 
-            let current = state.heightMM
-            if current != lastHeight {
-                lastHeight = current
-                lastProgressAt = clock.now()
-            } else if lastProgressAt.duration(to: clock.now()) >= stallTimeout {
+            if tracker.isStalled(height: state.heightMM, now: clock.now()) {
                 await handleStall()
                 break
             }
@@ -130,11 +155,13 @@ extension DeskManager {
     }
 
     /// Stops the desk and flags a stall after the height failed to change while
-    /// moving. The desk may be at a physical end-stop or the control module may
-    /// need a manual re-reference (E16 on the display).
+    /// moving. This is the timing backstop — the desk may be at a physical
+    /// end-stop, or the control module may be blocked without pushing a status
+    /// fault. When the desk does push a fault code, `handleModuleFault` sets a
+    /// precise `faultCode`; here it is left nil (generic stall).
     private func handleStall() async {
         FileLog.debug(
-            "movement stall: height unchanged for \(stallTimeout) while moving — stopping; desk may need manual re-reference (E16)",
+            "movement stall: height unchanged for \(stallTimeout) while moving — stopping; desk may need a reset",
             category: "movement"
         )
         try? await writeStopCommand()

@@ -44,11 +44,16 @@ public struct DeskState {
     public var presets: [PresetPosition]
     public var activePreset: Int?
 
-    /// Set when a movement was commanded but the desk height did not change,
-    /// i.e. the desk stopped responding (physical end-stop, or the control
-    /// module needs a manual re-reference — E16 on the display). The movement
-    /// loop clears this optimistically on each new move attempt.
+    /// Set when a movement was commanded but the desk stopped responding —
+    /// either the timing watchdog saw no height change, or the desk pushed a
+    /// fault on its status characteristic (E16/E26). Cleared optimistically on
+    /// each new move attempt.
     public var needsReference: Bool
+
+    /// Raw fault code from the desk status characteristic (99fa0003) when
+    /// `needsReference` was raised by a decoded fault, else nil (e.g. a
+    /// timing-only stall carries no code). Observed: 0x1e→E16, 0x17→E26.
+    public var faultCode: UInt8?
 
     /// Desk base offset in mm. Added to raw heights for display.
     public var deskOffsetMM: Int
@@ -64,6 +69,7 @@ public struct DeskState {
         presets = (1...4).map { PresetPosition(index: $0) }
         activePreset = nil
         needsReference = false
+        faultCode = nil
         deskOffsetMM = 0
     }
 }

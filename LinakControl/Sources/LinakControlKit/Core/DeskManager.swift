@@ -31,10 +31,37 @@ public actor DeskManager {
 
     // MARK: - State observation
 
-    private let stateContinuation: AsyncStream<DeskState>.Continuation
+    /// One continuation per active subscriber. A single `AsyncStream` delivers
+    /// each element to only one consumer, so the UI and the notification
+    /// observer must each get their own stream — otherwise they split the
+    /// snapshots between them and the observer misses events (e.g. the
+    /// needsReference edge → no notification).
+    private var stateSubscribers: [UUID: AsyncStream<DeskState>.Continuation] = [:]
 
-    /// Emits a new `DeskState` snapshot every time state changes.
-    public let stateStream: AsyncStream<DeskState>
+    /// A fresh, independent stream of `DeskState` snapshots for one subscriber.
+    /// Each access registers a new subscriber (multicast) and immediately
+    /// delivers the current snapshot. Every subscriber receives every update.
+    public var stateStream: AsyncStream<DeskState> {
+        let (stream, continuation) = AsyncStream<DeskState>.makeStream()
+        let id = UUID()
+        stateSubscribers[id] = continuation
+        continuation.yield(state)
+        continuation.onTermination = { [weak self] _ in
+            Task { await self?.removeStateSubscriber(id) }
+        }
+        return stream
+    }
+
+    private func removeStateSubscriber(_ id: UUID) {
+        stateSubscribers[id] = nil
+    }
+
+    /// Fans the current state out to every active subscriber.
+    private func yieldState() {
+        for continuation in stateSubscribers.values {
+            continuation.yield(state)
+        }
+    }
 
     // MARK: - Init
 
@@ -47,12 +74,6 @@ public actor DeskManager {
         self.configStore = configStore
         self.clock = clock
         self.state = DeskState()
-
-        var cont: AsyncStream<DeskState>.Continuation!
-        stateStream = AsyncStream { continuation in
-            cont = continuation
-        }
-        stateContinuation = cont
     }
 
     // MARK: - State access
@@ -186,7 +207,7 @@ public actor DeskManager {
     public func updateSettings(_ config: AppConfig) throws {
         try configStore.save(config)
         applyPresetLabels(from: config)
-        stateContinuation.yield(state)
+        yieldState()
     }
 }
 
@@ -197,7 +218,7 @@ extension DeskManager {
     /// Applies a mutation closure to `state` and yields the updated snapshot.
     func updateState(_ mutation: (inout DeskState) -> Void) {
         mutation(&state)
-        stateContinuation.yield(state)
+        yieldState()
     }
 
     /// Populates state from a handshake result and persists pairing info.
@@ -235,7 +256,7 @@ extension DeskManager {
         }
 
         persistPairingInfo(peripheralId: peripheralId, existingConfig: config, deskOffsetMM: offset)
-        stateContinuation.yield(state)
+        yieldState()
     }
 
     /// Saves paired desk UUID and offset to config.
@@ -274,12 +295,36 @@ extension DeskManager {
         }
     }
 
-    /// Logs a raw status packet as a hexdump. Decoding of specific fault codes
-    /// (e.g. E16) is deferred until real captures are available; for now this
-    /// records the material needed to build that decode.
-    private func handleStatusNotification(_ data: Data) {
+    /// Decodes a status packet from characteristic 99fa0003. The raw bytes are
+    /// always logged; a decoded fault (E16/E26 and friends) stops any active
+    /// movement and raises `needsReference` with the code. The desk clears the
+    /// pulse to empty shortly after, so `.ok` is intentionally not acted on —
+    /// `needsReference` is cleared optimistically on the next move attempt.
+    private func handleStatusNotification(_ data: Data) async {
         let hex = data.map { String(format: "%02x", $0) }.joined(separator: " ")
         FileLog.debug("status: [\(hex)]", category: "status")
+
+        if case .fault(let code) = DeskProtocol.parseDeskStatus(data) {
+            await handleModuleFault(code: code)
+        }
+    }
+
+    /// Stops all movement and flags a decoded desk fault. Shared by the status
+    /// listener (fast path — the desk pushed a fault) and reachable state so the
+    /// UI/IPC can surface the specific code.
+    func handleModuleFault(code: UInt8) async {
+        FileLog.debug("status fault: \(DeskProtocol.describeFault(code: code))", category: "status")
+        await cancelMovementTask()
+        await cancelPresetMoveTask()
+        try? await writeStopCommand()
+        updateState {
+            $0.isMoving = false
+            $0.moveDirection = nil
+            $0.speedMMS = 0
+            $0.targetPreset = nil
+            $0.needsReference = true
+            $0.faultCode = code
+        }
     }
 
     /// Processes a single height notification packet.
@@ -312,7 +357,7 @@ extension DeskManager {
             presets: state.presets,
             isMoving: state.isMoving
         )
-        stateContinuation.yield(state)
+        yieldState()
     }
 
     /// Maps a speed value to a move direction, or nil when stationary.
@@ -330,7 +375,7 @@ extension DeskManager {
             fresh.presets[i].label = presetLabel(index: i + 1, config: config)
         }
         state = fresh
-        stateContinuation.yield(state)
+        yieldState()
     }
 
     /// Refreshes preset labels in the current state from a config snapshot.

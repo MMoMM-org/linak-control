@@ -26,6 +26,14 @@ public final class DeskViewModel: ObservableObject {
     /// True when a movement stalled — the desk stopped responding and may need a
     /// manual reset on the control box (E16). Cleared on the next move attempt.
     @Published public var needsReference: Bool = false
+
+    /// Raw fault code behind `needsReference` when the desk pushed one (else nil).
+    @Published public var faultCode: UInt8?
+
+    /// User-facing message for the current fault, specific to the code when known.
+    public var faultMessage: String {
+        DeskProtocol.faultSummary(code: faultCode)
+    }
     @Published public var presets: [PresetPosition] = (1...4).map { PresetPosition(index: $0) }
     @Published public var activePreset: Int?
     @Published public var targetPreset: Int?
@@ -370,6 +378,7 @@ public final class DeskViewModel: ObservableObject {
         isMoving = snapshot.isMoving
         moveDirection = snapshot.moveDirection
         needsReference = snapshot.needsReference
+        faultCode = snapshot.faultCode
 
         // Apply offset to preset heights for display.
         presets = snapshot.presets.map { preset in
