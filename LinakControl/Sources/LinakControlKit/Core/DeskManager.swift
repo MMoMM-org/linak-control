@@ -274,12 +274,36 @@ extension DeskManager {
         }
     }
 
-    /// Logs a raw status packet as a hexdump. Decoding of specific fault codes
-    /// (e.g. E16) is deferred until real captures are available; for now this
-    /// records the material needed to build that decode.
-    private func handleStatusNotification(_ data: Data) {
+    /// Decodes a status packet from characteristic 99fa0003. The raw bytes are
+    /// always logged; a decoded fault (E16/E26 and friends) stops any active
+    /// movement and raises `needsReference` with the code. The desk clears the
+    /// pulse to empty shortly after, so `.ok` is intentionally not acted on —
+    /// `needsReference` is cleared optimistically on the next move attempt.
+    private func handleStatusNotification(_ data: Data) async {
         let hex = data.map { String(format: "%02x", $0) }.joined(separator: " ")
         FileLog.debug("status: [\(hex)]", category: "status")
+
+        if case .fault(let code) = DeskProtocol.parseDeskStatus(data) {
+            await handleModuleFault(code: code)
+        }
+    }
+
+    /// Stops all movement and flags a decoded desk fault. Shared by the status
+    /// listener (fast path — the desk pushed a fault) and reachable state so the
+    /// UI/IPC can surface the specific code.
+    func handleModuleFault(code: UInt8) async {
+        FileLog.debug("status fault: \(DeskProtocol.describeFault(code: code))", category: "status")
+        await cancelMovementTask()
+        await cancelPresetMoveTask()
+        try? await writeStopCommand()
+        updateState {
+            $0.isMoving = false
+            $0.moveDirection = nil
+            $0.speedMMS = 0
+            $0.targetPreset = nil
+            $0.needsReference = true
+            $0.faultCode = code
+        }
     }
 
     /// Processes a single height notification packet.

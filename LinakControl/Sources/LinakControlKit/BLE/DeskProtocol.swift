@@ -5,6 +5,17 @@ import Foundation
 
 // MARK: - Data Models
 
+/// Decoded state of the desk status characteristic (99fa0003).
+///
+/// The desk pushes a short pulse `[0x01, 0x00, code]` with a non-zero `code`
+/// when it raises a fault (the control box shows an E-number), then clears back
+/// to an empty payload. The community protocol references do not document this
+/// characteristic; the code→display mapping below is empirical (captured logs).
+public enum DeskStatus: Equatable, Sendable {
+    case ok
+    case fault(code: UInt8)
+}
+
 /// Capabilities reported by the desk via the 7F 80 query on characteristic 99fa0011.
 public struct DeskCapabilities: Sendable {
     public let presetCount: Int
@@ -48,6 +59,43 @@ public enum DeskLimits {
 public enum DeskProtocol {
 
     // MARK: - Decoding
+
+    /// Parse a desk status notification from characteristic 99fa0003.
+    ///
+    /// Fault pulses observed as `[0x01, 0x00, code]` with `code != 0`; an empty
+    /// or all-clear payload decodes to `.ok`. Only the fault case is actionable —
+    /// the desk clears the pulse to empty shortly after, so callers must not
+    /// treat `.ok` as "fault resolved".
+    public static func parseDeskStatus(_ data: Data) -> DeskStatus {
+        guard data.count >= 3, data[0] == 0x01, data[2] != 0x00 else { return .ok }
+        return .fault(code: data[2])
+    }
+
+    /// Human-readable description of a desk fault code from `parseDeskStatus`.
+    ///
+    /// Known codes are mapped to their observed control-box display number and
+    /// LINAK meaning; unknown codes fall back to a generic message. The raw code
+    /// is always included so new codes can be identified from logs.
+    public static func describeFault(code: UInt8) -> String {
+        let hex = String(format: "0x%02x", code)
+        switch code {
+        case 0x1e:
+            return "E16 (\(hex)): control box reports an illegal key combination — the desk needs a reset / re-reference"
+        case 0x17:
+            return "E26 (\(hex)): channel 4 missing — possible motor or cable fault in a desk leg"
+        default:
+            return "fault \(hex): the desk reported an unrecognised fault"
+        }
+    }
+
+    /// Short user-facing summary for a fault code (for notifications / banners).
+    public static func faultSummary(code: UInt8?) -> String {
+        switch code {
+        case 0x1e: return "The desk needs a reset on the control box (E16)."
+        case 0x17: return "Possible hardware fault in a desk leg — check the cables (E26)."
+        default:   return "The desk stopped responding."
+        }
+    }
 
     /// Parse a 4-byte height notification from characteristic 99fa0021.
     ///

@@ -11,11 +11,12 @@ final class MockNotificationPoster: NotificationPosting, @unchecked Sendable {
     private(set) var disconnectedCount = 0
     private(set) var connectedCount = 0
     private(set) var needsReferenceCount = 0
+    private(set) var lastNeedsReferenceBody: String?
 
     func requestPermission() { permissionRequested = true }
     func postDisconnected() { disconnectedCount += 1 }
     func postConnected() { connectedCount += 1 }
-    func postNeedsReference() { needsReferenceCount += 1 }
+    func postNeedsReference(body: String) { needsReferenceCount += 1; lastNeedsReferenceBody = body }
 }
 
 // MARK: - Test Factories

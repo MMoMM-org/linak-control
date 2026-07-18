@@ -127,6 +127,16 @@ final class IPCResponseRoundTripTests: XCTestCase {
         let json = #"{"connected":true,"unit":"cm","presets":[]}"#
         let decoded = try JSONDecoder().decode(StatusResult.self, from: Data(json.utf8))
         XCTAssertFalse(decoded.needsReference, "Missing needs_reference must decode to false")
+        XCTAssertNil(decoded.faultCode, "Missing fault_code must decode to nil")
+    }
+
+    func testStatusResponse_faultCode_roundTrip() throws {
+        let status = StatusResult(connected: true, unit: "cm", needsReference: true, faultCode: 0x1e)
+        let decoded = try roundTrip(IPCResponse(id: "req-fc", result: .status(status), error: nil))
+        guard case .status(let s) = decoded.result else {
+            return XCTFail("Expected .status result")
+        }
+        XCTAssertEqual(s.faultCode, 0x1e, "fault_code must survive the round-trip")
     }
 
     func testOkResponse_withTargetMM_roundTrip() throws {

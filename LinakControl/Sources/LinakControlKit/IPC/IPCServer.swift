@@ -367,7 +367,8 @@ extension IPCServer {
             unit: config.unit.rawValue,
             presets: presets,
             activePreset: state.activePreset,
-            needsReference: state.needsReference
+            needsReference: state.needsReference,
+            faultCode: state.faultCode.map(Int.init)
         )
     }
 }

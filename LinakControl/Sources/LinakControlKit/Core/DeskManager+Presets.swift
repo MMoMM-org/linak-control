@@ -39,6 +39,9 @@ extension DeskManager {
         updateState {
             $0.targetPreset = index
             $0.isMoving = true
+            // Optimistic: a fresh recall clears any prior stall/fault flag.
+            $0.needsReference = false
+            $0.faultCode = nil
         }
 
         try await sendPreflight()
@@ -101,7 +104,10 @@ extension DeskManager {
         }
     }
 
-    /// Executes the control loop: writes target every 100ms until arrival or timeout.
+    /// Executes the control loop: writes target every 100ms until arrival,
+    /// stall, or the 30s timeout. The stall watchdog stops early (2s of no
+    /// height change) and raises `needsReference`, so a blocked module — e.g.
+    /// E16/E26 during a recall — is no longer hammered for the full timeout.
     private func runPresetLoop(
         targetMM: Int,
         targetData: Data,
@@ -109,6 +115,9 @@ extension DeskManager {
         clock: any ClockProtocol,
         deadline: ContinuousClock.Instant
     ) async {
+        var tracker = StallTracker(height: state.heightMM, now: clock.now())
+        var stalled = false
+
         while !Task.isCancelled {
             if hasArrived(at: targetMM) { break }
             if clock.now() >= deadline { break }
@@ -118,6 +127,19 @@ extension DeskManager {
                 type: .withoutResponse
             )
             try? await clock.sleep(for: presetLoopInterval)
+
+            if tracker.isStalled(height: state.heightMM, now: clock.now()) {
+                stalled = true
+                break
+            }
+        }
+
+        if stalled {
+            FileLog.debug(
+                "preset stall: height unchanged for \(stallTimeout) — stopping recall; desk may need a reset",
+                category: "movement"
+            )
+            updateState { $0.needsReference = true }
         }
         await clearPresetMoveState()
     }

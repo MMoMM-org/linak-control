@@ -47,9 +47,10 @@ private func observeStateStream(
 
         let current = state.connectionState
 
-        // Fire once on the rising edge of the stall/needs-reference flag.
+        // Fire once on the rising edge of the stall/needs-reference flag, with a
+        // message specific to the decoded fault code when the desk pushed one.
         if state.needsReference, !previousNeedsReference {
-            poster.postNeedsReference()
+            poster.postNeedsReference(body: DeskProtocol.faultSummary(code: state.faultCode))
         }
         previousNeedsReference = state.needsReference
 

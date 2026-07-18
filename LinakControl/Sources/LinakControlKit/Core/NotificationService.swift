@@ -10,7 +10,7 @@ public protocol NotificationPosting: Sendable {
     func requestPermission()
     func postDisconnected()
     func postConnected()
-    func postNeedsReference()
+    func postNeedsReference(body: String)
 }
 
 // MARK: - NotificationService
@@ -47,10 +47,10 @@ public final class NotificationService: NotificationPosting {
         UNUserNotificationCenter.current().add(request)
     }
 
-    public func postNeedsReference() {
+    public func postNeedsReference(body: String) {
         let content = UNMutableNotificationContent()
         content.title = "Desk Not Moving"
-        content.body = "The desk stopped responding. It may need a manual reset on the control box."
+        content.body = body
         let request = UNNotificationRequest(
             identifier: "desk-needs-reference",
             content: content,

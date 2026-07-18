@@ -130,4 +130,26 @@ final class DeskManagerStallWatchdogTests: XCTestCase {
 
         try await setup.manager.stop()
     }
+
+    func testPresetRecallStallSetsNeedsReference() async throws {
+        let setup = try await makeStallTestSetup()
+
+        // goToPreset blocks on the preflight clock.sleep until the clock advances.
+        let goTask = Task { try? await setup.manager.goToPreset(index: 2) }
+        try await Task.sleep(for: .milliseconds(50))
+        setup.clock.advance(by: .milliseconds(120))   // release preflight → loop starts
+        _ = await goTask.value
+        try await Task.sleep(for: .milliseconds(50))   // let the loop park at its sleep
+
+        // Height never changes → the preset loop must stall well before the 30s timeout.
+        setup.clock.advance(by: .milliseconds(2100))
+        await waitFor { await setup.manager.currentState.needsReference }
+
+        let state = await setup.manager.currentState
+        XCTAssertTrue(state.needsReference, "Preset recall stall must raise needsReference")
+        XCTAssertNil(state.faultCode, "A timing stall carries no fault code")
+
+        // Let clearPresetMoveState's settle sleep finish.
+        setup.clock.advance(by: .milliseconds(600))
+    }
 }
