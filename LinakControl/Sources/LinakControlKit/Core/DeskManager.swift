@@ -132,6 +132,33 @@ public actor DeskManager {
     /// Preset labels from config are preserved.
     public func disconnect() async {
         isUserInitiatedDisconnect = true
+        cancelConnectionTasks()
+        bleController.disconnect()
+        resetToDisconnected()
+    }
+
+    /// Stands the app down after a desk fault so the desk can be manually
+    /// initialised without BLE interference. Like `disconnect()` (releases BLE
+    /// and suppresses auto-reconnect), but PRESERVES `needsReference`/`faultCode`
+    /// so the UI keeps showing why — a plain `disconnect()` would wipe them via
+    /// `resetToDisconnected()`. Triggered on the needsReference rising edge by
+    /// `ConnectionStateObserver`.
+    public func standDown() async {
+        guard state.connectionState == .connected else { return }
+        isUserInitiatedDisconnect = true
+        cancelConnectionTasks()
+        bleController.disconnect()
+        updateState {
+            $0.connectionState = .disconnected
+            $0.isMoving = false
+            $0.moveDirection = nil
+            $0.speedMMS = 0
+            // needsReference / faultCode intentionally preserved.
+        }
+    }
+
+    /// Cancels the background tasks tied to an active connection.
+    private func cancelConnectionTasks() {
         heightNotificationTask?.cancel()
         heightNotificationTask = nil
         statusNotificationTask?.cancel()
@@ -140,8 +167,6 @@ public actor DeskManager {
         heartbeatTask = nil
         reconnectionTask?.cancel()
         reconnectionTask = nil
-        bleController.disconnect()
-        resetToDisconnected()
     }
 
     // MARK: - Movement (implementation in DeskManager+Movement.swift)
@@ -233,6 +258,10 @@ extension DeskManager {
         state.heightMM = result.currentHeight
         state.connectionState = .connected
         state.deskName = config.pairedDeskName
+        // A fresh connection is a clean slate — clear any fault preserved across
+        // a stand-down so the warning does not linger after reconnecting.
+        state.needsReference = false
+        state.faultCode = nil
 
         // Use config offset if manually set; otherwise initialize from handshake
         // on first pair (or after config deletion). Persisted so it sticks.
@@ -397,5 +426,18 @@ extension DeskManager {
         guard state.connectionState == .connected else {
             throw DeskError.notConnected
         }
+    }
+
+    /// Ensures a connection for a user-triggered movement. If already connected,
+    /// returns immediately; otherwise reconnects to the paired desk first (this
+    /// is how a move recovers from a fault stand-down). Throws
+    /// `DeskError.notConnected` if no desk is paired.
+    func ensureConnectedForAction() async throws {
+        if state.connectionState == .connected { return }
+        guard let uuidString = (try? configStore.load())?.pairedDeskUUID,
+              let peripheralId = UUID(uuidString: uuidString) else {
+            throw DeskError.notConnected
+        }
+        try await connect(peripheralId: peripheralId)
     }
 }

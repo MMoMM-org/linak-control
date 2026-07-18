@@ -92,9 +92,9 @@ private struct DisconnectedContent: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle")
+            Image(systemName: viewModel.needsReference ? "exclamationmark.triangle.fill" : "exclamationmark.triangle")
                 .font(.system(size: 32))
-                .foregroundColor(.secondary)
+                .foregroundColor(viewModel.needsReference ? .orange : .secondary)
 
             Text(stateTitle)
                 .font(.headline)
@@ -102,9 +102,11 @@ private struct DisconnectedContent: View {
             Text(stateSubtitle)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
 
             if viewModel.connectionState == .disconnected {
-                Button("Retry") { viewModel.retryConnection() }
+                Button(viewModel.needsReference ? "Reconnect" : "Retry") { viewModel.retryConnection() }
                     .buttonStyle(.borderedProminent)
             }
 
@@ -117,6 +119,7 @@ private struct DisconnectedContent: View {
     }
 
     private var stateTitle: String {
+        if viewModel.needsReference { return "Desk Paused" }
         switch viewModel.connectionState {
         case .scanning: return "Scanning..."
         case .connecting: return "Connecting..."
@@ -125,6 +128,11 @@ private struct DisconnectedContent: View {
     }
 
     private var stateSubtitle: String {
+        // After a fault the app stands down so the desk can be initialised on the
+        // control box; tell the user what happened and how to resume.
+        if viewModel.needsReference {
+            return "\(viewModel.faultMessage) Initialise it on the control box, then Reconnect or move the desk."
+        }
         switch viewModel.connectionState {
         case .scanning, .connecting: return "Looking for your desk"
         default: return "Reconnecting..."
@@ -161,6 +169,18 @@ private struct FooterView: View {
 
     var body: some View {
         HStack {
+            if viewModel.connectionState == .connected {
+                Button {
+                    viewModel.disconnectFromDesk()
+                } label: {
+                    Label("Disconnect", systemImage: "bolt.slash")
+                        .labelStyle(.iconOnly)
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.secondary)
+                .help("Disconnect from the desk")
+                .accessibilityIdentifier("linak.popover.disconnect")
+            }
             Spacer()
             Button {
                 viewModel.showSettings = true

@@ -47,11 +47,15 @@ private func observeStateStream(
 
         let current = state.connectionState
 
-        // Fire once on the rising edge of the stall/needs-reference flag, with a
-        // message specific to the decoded fault code when the desk pushed one.
+        // On the rising edge of the stall/needs-reference flag: notify the user,
+        // then stand the app down (release BLE, stop reconnecting) so the desk
+        // can be manually initialised without interference. The subsequent
+        // .connected → .disconnected transition is user-initiated, so it does
+        // not fire a "Disconnected" notification.
         if state.needsReference, !previousNeedsReference {
             FileLog.debug("posting needs-reference notification (faultCode: \(state.faultCode.map { String(format: "0x%02x", $0) } ?? "none"))", category: "core")
             poster.postNeedsReference(body: DeskProtocol.faultSummary(code: state.faultCode))
+            await manager.standDown()
         }
         previousNeedsReference = state.needsReference
 

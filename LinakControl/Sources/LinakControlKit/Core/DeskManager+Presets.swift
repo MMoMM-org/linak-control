@@ -24,7 +24,7 @@ extension DeskManager {
     /// Validates preconditions, cancels any prior move, and starts the control loop.
     func executeGoToPreset(index: Int) async throws {
         FileLog.debug("executeGoToPreset(\(index))", category: "core")
-        try requireConnected()
+        try await ensureConnectedForAction()
         try await recordUserAction()
 
         let targetMM = try resolvePresetHeight(index)
