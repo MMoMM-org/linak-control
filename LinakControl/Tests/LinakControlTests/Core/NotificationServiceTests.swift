@@ -10,10 +10,12 @@ final class MockNotificationPoster: NotificationPosting, @unchecked Sendable {
     private(set) var permissionRequested = false
     private(set) var disconnectedCount = 0
     private(set) var connectedCount = 0
+    private(set) var needsReferenceCount = 0
 
     func requestPermission() { permissionRequested = true }
     func postDisconnected() { disconnectedCount += 1 }
     func postConnected() { connectedCount += 1 }
+    func postNeedsReference() { needsReferenceCount += 1 }
 }
 
 // MARK: - Test Factories
@@ -133,6 +135,39 @@ final class ConnectionStateObserverReconnectTests: XCTestCase {
 
         XCTAssertEqual(poster.connectedCount, 0, "Initial connect must not trigger Connected notification")
         XCTAssertEqual(poster.disconnectedCount, 0, "Initial connect must not trigger Disconnected notification")
+
+        await manager.disconnect()
+    }
+}
+
+// MARK: - Needs-Reference (Stall) Tests
+
+final class ConnectionStateObserverStallTests: XCTestCase {
+
+    func testMovementStallPostsNeedsReferenceNotification() async throws {
+        let clock = TestClock()
+        let mock = MockBLEController()
+        configureHappyPath(mock)
+        let store = makeTempConfigStore()
+        let manager = DeskManager(bleController: mock, configStore: store, clock: clock)
+        let poster = MockNotificationPoster()
+        let observer = ConnectionStateObserver(deskManager: manager, notificationPoster: poster)
+        let observerTask = observer.start()
+        defer { observerTask.cancel() }
+
+        try await manager.connect(peripheralId: UUID())
+
+        // Start a manual move; the desk height never changes → stall.
+        try await manager.moveUp(mode: .manual)
+        try await Task.sleep(for: .milliseconds(50))
+        clock.advance(by: .milliseconds(2100))
+        await waitFor { await manager.currentState.needsReference }
+        try await Task.sleep(for: .milliseconds(50))
+
+        XCTAssertEqual(
+            poster.needsReferenceCount, 1,
+            "A movement stall must post exactly one needs-reference notification"
+        )
 
         await manager.disconnect()
     }

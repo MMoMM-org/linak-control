@@ -160,10 +160,12 @@ public final class BLEController: NSObject, BLEControllerProtocol, @unchecked Se
                 }
 
                 #if DEBUG
+                // Per-write hexdump fires at ~10 Hz during movement — trace-level
+                // and DEBUG-only so it never floods the bounded release log.
                 let hex = data.map { String(format: "%02x", $0) }.joined(separator: " ")
                 let typeStr = type == .withResponse ? "withResponse" : "withoutResponse"
                 let props = characteristic.properties
-                FileLog.debug("write: [\(hex)] to \(characteristicUUID.uuidString) type=\(typeStr) props=\(props.rawValue)", category: "ble")
+                FileLog.trace("write: [\(hex)] to \(characteristicUUID.uuidString) type=\(typeStr) props=\(props.rawValue)", category: "ble")
                 #endif
 
                 if type == .withResponse {

@@ -104,7 +104,7 @@ The script stops the running app, rebuilds Release, removes the existing `LinakC
 
 **What is reset**
 
-- `~/Library/Logs/LinakControl/debug.log` is truncated at every app launch (debug builds only). Save a copy first if you need it for an issue report.
+- `~/Library/Logs/LinakControl/debug.log` persists across app restarts (release builds included) and is capped at 1 MB rolling — old lines roll off as it fills. Save a copy first if you need a specific event for an issue report.
 
 **Starting fresh** — if you want to re-pair from scratch (forgetting the saved desk and all settings), wipe the config directory before relaunching:
 

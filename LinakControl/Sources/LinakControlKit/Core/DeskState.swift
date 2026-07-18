@@ -44,6 +44,12 @@ public struct DeskState {
     public var presets: [PresetPosition]
     public var activePreset: Int?
 
+    /// Set when a movement was commanded but the desk height did not change,
+    /// i.e. the desk stopped responding (physical end-stop, or the control
+    /// module needs a manual re-reference — E16 on the display). The movement
+    /// loop clears this optimistically on each new move attempt.
+    public var needsReference: Bool
+
     /// Desk base offset in mm. Added to raw heights for display.
     public var deskOffsetMM: Int
 
@@ -57,6 +63,7 @@ public struct DeskState {
         targetPreset = nil
         presets = (1...4).map { PresetPosition(index: $0) }
         activePreset = nil
+        needsReference = false
         deskOffsetMM = 0
     }
 }

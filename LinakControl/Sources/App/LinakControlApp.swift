@@ -21,7 +21,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotkeyManager: HotkeyManager!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        FileLog.reset()
+        // Do not reset the log at launch — it must persist across app restarts
+        // so an intermittent desk fault (E16) can be captured after the fact.
+        // The banner below marks each new session; the 1 MB rolling cap bounds growth.
         FileLog.debug("=== LinakControl launch ===", category: "app")
 
         let bleController = BLEController()

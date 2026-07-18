@@ -84,6 +84,8 @@ public struct StatusResult: Codable, Sendable {
     public let unit: String
     public let presets: [PresetInfo]
     public let activePreset: Int?
+    /// True when a movement stalled and the desk may need a manual reset (E16).
+    public let needsReference: Bool
 
     public init(
         connected: Bool,
@@ -92,7 +94,8 @@ public struct StatusResult: Codable, Sendable {
         heightDisplay: String? = nil,
         unit: String,
         presets: [PresetInfo] = [],
-        activePreset: Int? = nil
+        activePreset: Int? = nil,
+        needsReference: Bool = false
     ) {
         self.connected = connected
         self.deskName = deskName
@@ -101,6 +104,20 @@ public struct StatusResult: Codable, Sendable {
         self.unit = unit
         self.presets = presets
         self.activePreset = activePreset
+        self.needsReference = needsReference
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        connected = try c.decode(Bool.self, forKey: .connected)
+        deskName = try c.decodeIfPresent(String.self, forKey: .deskName)
+        heightMM = try c.decodeIfPresent(Int.self, forKey: .heightMM)
+        heightDisplay = try c.decodeIfPresent(String.self, forKey: .heightDisplay)
+        unit = try c.decode(String.self, forKey: .unit)
+        presets = try c.decodeIfPresent([PresetInfo].self, forKey: .presets) ?? []
+        activePreset = try c.decodeIfPresent(Int.self, forKey: .activePreset)
+        // Tolerant of daemons predating this field (rolling upgrade).
+        needsReference = try c.decodeIfPresent(Bool.self, forKey: .needsReference) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -111,6 +128,7 @@ public struct StatusResult: Codable, Sendable {
         case unit
         case presets
         case activePreset = "active_preset"
+        case needsReference = "needs_reference"
     }
 }
 

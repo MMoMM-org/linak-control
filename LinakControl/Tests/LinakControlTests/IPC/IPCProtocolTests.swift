@@ -110,6 +110,23 @@ final class IPCResponseRoundTripTests: XCTestCase {
         XCTAssertEqual(s.unit, "cm")
         XCTAssertEqual(s.presets.count, 4)
         XCTAssertEqual(s.activePreset, 2)
+        XCTAssertFalse(s.needsReference, "needsReference defaults to false")
+    }
+
+    func testStatusResponse_needsReference_roundTrip() throws {
+        let status = StatusResult(connected: true, unit: "cm", needsReference: true)
+        let decoded = try roundTrip(IPCResponse(id: "req-nr", result: .status(status), error: nil))
+        guard case .status(let s) = decoded.result else {
+            return XCTFail("Expected .status result")
+        }
+        XCTAssertTrue(s.needsReference, "needsReference must survive the round-trip")
+    }
+
+    func testStatusResult_missingNeedsReference_decodesFalse() throws {
+        // A daemon predating the field omits needs_reference — decode must tolerate it.
+        let json = #"{"connected":true,"unit":"cm","presets":[]}"#
+        let decoded = try JSONDecoder().decode(StatusResult.self, from: Data(json.utf8))
+        XCTAssertFalse(decoded.needsReference, "Missing needs_reference must decode to false")
     }
 
     func testOkResponse_withTargetMM_roundTrip() throws {

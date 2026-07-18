@@ -21,6 +21,7 @@ public actor DeskManager {
 
     var state: DeskState
     private var heightNotificationTask: Task<Void, Never>?
+    private var statusNotificationTask: Task<Void, Never>?
     var movementTask: Task<Void, Never>?
     var presetMoveTask: Task<Void, Never>?
     var reconnectionTask: Task<Void, Never>?
@@ -94,6 +95,7 @@ public actor DeskManager {
             FileLog.debug("connect: handshake complete, applying result", category: "core")
             applyHandshakeResult(result, peripheralId: peripheralId)
             startHeightNotificationListener()
+            startStatusNotificationListener()
             startHeartbeat()
             FileLog.debug("connect: DONE -- state=connected", category: "core")
         } catch {
@@ -111,6 +113,8 @@ public actor DeskManager {
         isUserInitiatedDisconnect = true
         heightNotificationTask?.cancel()
         heightNotificationTask = nil
+        statusNotificationTask?.cancel()
+        statusNotificationTask = nil
         heartbeatTask?.cancel()
         heartbeatTask = nil
         reconnectionTask?.cancel()
@@ -252,6 +256,30 @@ extension DeskManager {
                 await self.handleHeightNotification(data)
             }
         }
+    }
+
+    /// Starts the background task that listens to the desk status characteristic
+    /// (`99fa0003`). The desk reports fault/reference conditions here — including
+    /// the state behind an E16 display error. The raw bytes are logged (they
+    /// persist across app restarts) so an intermittent fault can be captured and
+    /// the exact status encoding decoded later. See issue #1.
+    private func startStatusNotificationListener() {
+        let stream = bleController.notifications(for: DeskUUID.status)
+        statusNotificationTask = Task { [weak self] in
+            guard let self else { return }
+            for await data in stream {
+                guard !Task.isCancelled else { break }
+                await self.handleStatusNotification(data)
+            }
+        }
+    }
+
+    /// Logs a raw status packet as a hexdump. Decoding of specific fault codes
+    /// (e.g. E16) is deferred until real captures are available; for now this
+    /// records the material needed to build that decode.
+    private func handleStatusNotification(_ data: Data) {
+        let hex = data.map { String(format: "%02x", $0) }.joined(separator: " ")
+        FileLog.debug("status: [\(hex)]", category: "status")
     }
 
     /// Processes a single height notification packet.

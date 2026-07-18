@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Recover from common LinakControl failures without filing a ticket: a symptom-first list of the issues you're most likely to hit, where the logs live (and why release builds don't have any), an ordered diagnostic checklist, and what to include if you do need to escalate.
+Recover from common LinakControl failures without filing a ticket: a symptom-first list of the issues you're most likely to hit, where the logs live (release builds write them too), an ordered diagnostic checklist, and what to include if you do need to escalate.
 
 ## Common issues
 
@@ -62,6 +62,14 @@ The CLI installed somewhere your shell does not search.
 - Default location: `/usr/local/bin/deskctl`. Confirm it is in your `$PATH`.
 - If you used a custom `INSTALL_BIN` with `make install`, add that directory to `$PATH` in your shell profile.
 
+**Desk stops mid-move and the popover warns "Desk stopped moving" (control box shows E16)**
+
+The desk module sometimes needs to re-reference its height. While it is in that state it refuses to move and shows **E16** on the control box. The app detects that the desk is not moving despite the command, stops sending move commands (so it no longer fights the module), and shows a warning banner plus a macOS notification.
+
+- Re-reference the desk manually on the control box: hold the **down** button until the desk reaches its lowest position and resets (follow your LINAK control box's re-initialisation procedure).
+- Once the module is happy again, movement from the app works normally — the warning clears on your next move.
+- Note: the app also shows this warning if you hold a direction into the desk's physical end-stop (the height stops changing). That is harmless — just release the button.
+
 **A hand edit to `config.json` was silently undone**
 
 There is no file watcher. The running app holds the config in memory; the next `ConfigStore.save()` (any UI change) overwrites your edit.
@@ -70,34 +78,31 @@ There is no file watcher. The running app holds the config in memory; the next `
 
 ## Where to look for logs
 
-**Debug builds** — `LinakControl/.app` built via `./run.sh` (or `make xcode-build-debug`) writes to:
+Both debug **and release** builds write an event log to:
 
 ```
 ~/Library/Logs/LinakControl/debug.log
 ```
 
-The file is truncated at every app launch and capped at **1 MB** to prevent unbounded growth. Each line is timestamped with millisecond precision and tagged with a category (e.g. `[ui]`, `[ble]`).
-
 ```bash
 tail -f ~/Library/Logs/LinakControl/debug.log
 ```
 
-**Release builds** — the installed `LinakControl.app` from `./install.sh` is built in Release configuration. The `FileLog.debug` call is wrapped in `#if DEBUG`, so **release builds write no log file at all**. If you want to capture logs from the installed app, rebuild and run a debug build:
+Each line is timestamped with millisecond precision and tagged with a category (e.g. `[ui]`, `[ble]`, `[status]`, `[movement]`). The log **persists across app restarts** (it is no longer truncated at launch) and is capped at **1 MB rolling** to bound growth — so an intermittent fault can be captured after it happens, as long as you grab the log before it rolls over. Each launch appends a `=== LinakControl launch ===` banner so you can find the session boundary.
 
-```bash
-./run.sh
-tail -f ~/Library/Logs/LinakControl/debug.log
-```
+This is what makes it possible to diagnose intermittent hardware faults (e.g. the desk showing **E16** and needing a manual re-reference): reproduce the fault, then send the relevant slice of `debug.log`. The `[status]` lines are the raw bytes the desk reports on its status characteristic — the raw material for pinning down exactly what the desk signalled.
 
-**Console.app fallback** (release builds)
+High-frequency per-tick output (the ~10 Hz BLE write hexdump) is **debug-only** so it never floods the bounded release log; release logs stay event-level.
 
-For release builds, your only diagnostic surface is `Console.app`:
+**Console.app fallback**
+
+`Console.app` also captures `os_log` entries and unhandled errors:
 
 1. Open `Console.app`.
 2. Filter on `LinakControl` in the search bar.
 3. Reproduce the issue.
 
-Console captures `os_log` entries and unhandled errors but not the structured `[category]` lines from debug builds.
+It does not show the structured `[category]` lines from `debug.log`.
 
 **`deskctl` does not log**
 
@@ -147,17 +152,15 @@ deskctl config show
 - Confirm `desk_offset_mm` looks reasonable for your installation.
 - If anything looks wrong, `deskctl config reset` wipes back to defaults — you'll re-pair from scratch.
 
-**6. Switch to a debug build for visibility**
+**6. Capture the log around the failure**
 
-If steps 1–5 look fine but the symptom persists, capture logs from a debug build:
+If steps 1–5 look fine but the symptom persists, watch the log while you reproduce it (this works on the installed release build too):
 
 ```bash
-./run.sh
-# in another terminal:
 tail -f ~/Library/Logs/LinakControl/debug.log
 ```
 
-Reproduce the issue and copy the last 50–100 lines for the bug report.
+Reproduce the issue and copy the last 50–100 lines for the bug report. Grab it soon after the fault — the log is a 1 MB rolling window, so heavy activity afterwards can push the event out.
 
 ## Getting help
 
@@ -189,7 +192,7 @@ To save a round-trip, include this in the report:
 - Output of `deskctl service status`.
 - Output of `deskctl status --json`.
 - Output of `deskctl config show` (redact `paired_desk_uuid` if you care; the name and offset are harmless).
-- For debug builds: the last ~100 lines of `~/Library/Logs/LinakControl/debug.log` around the time of the failure.
+- The last ~100 lines of `~/Library/Logs/LinakControl/debug.log` around the time of the failure (works on release builds too — see [Where to look for logs](#where-to-look-for-logs)).
 
 **One thing to leave out**
 

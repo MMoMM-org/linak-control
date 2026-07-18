@@ -50,11 +50,35 @@ private struct ConnectedContent: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+            if viewModel.needsReference {
+                NeedsReferenceBanner()
+            }
             HeightHeroView(viewModel: viewModel)
             MovementControlView(viewModel: viewModel)
             PresetGridView(viewModel: viewModel)
             FooterView(viewModel: viewModel)
         }
+    }
+}
+
+// MARK: - NeedsReferenceBanner
+
+/// Compact warning shown when a movement stalled — the desk stopped responding
+/// and may need a manual reset on the control box (E16 on the display).
+private struct NeedsReferenceBanner: View {
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.orange)
+            Text("Desk stopped moving. It may need a manual reset on the control box.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(8)
+        .background(Color.orange.opacity(0.12))
+        .cornerRadius(8)
     }
 }
 

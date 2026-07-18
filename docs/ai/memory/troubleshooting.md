@@ -1,5 +1,10 @@
 # Troubleshooting -- linak-control
-<!-- Known issues and proven fixes. Updated: 2026-04-08 -->
+<!-- Known issues and proven fixes. Updated: 2026-07-18 -->
+
+<!-- 2026-07-18 -->
+## Desk stalls / E16 while app keeps sending move commands -- Status: resolved (issue #1)
+The manual/auto move loops (DeskManager+Movement.swift) wrote the move command every 100ms with `try?` and inspected no feedback, so a blocked desk module (which shows E16 and needs a manual re-reference) was hammered 10x/sec. Fix: the loops are now actor-isolated and watch `state.heightMM`; if height does not change for `stallTimeout` (2s) while moving, the loop stops, writes stop twice, and sets `DeskState.needsReference` (surfaced via popover banner, macOS notification, IPC status). Pattern mirrors `runPresetLoop`. Known limit: a physical end-stop also triggers this (harmless) -- precise E16 vs end-stop needs the status-byte decode (see below).
+Deferred layer: the status characteristic 99fa0003 was subscribed in handshake but never consumed. Now `startStatusNotificationListener` logs raw status packets (category "status"). `FileLog.debug` writes in RELEASE too and is no longer reset at launch, so the log at ~/Library/Logs/LinakControl/debug.log persists across app restarts (1MB rolling). Capture a real E16 there, then decode the status byte to set `needsReference` precisely. High-frequency per-tick logs use `FileLog.trace` (DEBUG-only) to avoid flooding the release log.
 
 <!-- 2026-04-08 -->
 ## Movement button icon no feedback during auto-move -- Status: resolved
