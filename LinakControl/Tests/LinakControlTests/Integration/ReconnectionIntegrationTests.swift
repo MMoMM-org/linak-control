@@ -187,6 +187,78 @@ final class ReconnectionDuringMovementIntegrationTests: XCTestCase {
     }
 }
 
+// MARK: - BLE Disconnect Signal Wiring
+
+final class ReconnectionDisconnectSignalIntegrationTests: XCTestCase {
+
+    /// Verifies the production wiring: a BLE peripheral-disconnect signal routed
+    /// through `startDisconnectObserver()` drives the manager to `.disconnected`
+    /// and starts the backoff reconnection loop — the gap described in issue #6.
+    func testBLEDisconnectSignalTriggersReconnection() async throws {
+        let clock = TestClock()
+        let mock = MockBLEController()
+        let manager = try await makeConnectedManager(mock: mock, clock: clock)
+        await manager.startDisconnectObserver()
+
+        // Fail reconnect attempts so we can observe the backoff schedule.
+        mock.shouldFailConnect = true
+        let baseCount = mock.connectCallCount
+
+        // Simulate an unexpected drop (desk power-cycle, out of range).
+        mock.emitDisconnect()
+
+        // Give the observer a moment to route the signal to handleDisconnection().
+        try await Task.sleep(for: .milliseconds(50))
+        let stateAfterDrop = await manager.currentState
+        XCTAssertEqual(
+            stateAfterDrop.connectionState, .disconnected,
+            "The disconnect signal must drive the manager to .disconnected"
+        )
+        XCTAssertEqual(
+            mock.connectCallCount, baseCount,
+            "No reconnect attempt should fire before the 1s backoff window"
+        )
+
+        // Advance 1s — the first reconnect attempt fires.
+        clock.advance(by: .seconds(1))
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(
+            mock.connectCallCount, baseCount + 1,
+            "First reconnect attempt should fire 1s after the disconnect signal"
+        )
+
+        mock.shouldFailConnect = false
+        await manager.disconnect()
+    }
+
+    /// Verifies the reconnection guard holds through the real signal path: a
+    /// user-initiated `disconnect()` sets `isUserInitiatedDisconnect`, so the
+    /// disconnect signal it triggers must NOT start a reconnection loop.
+    func testUserInitiatedDisconnectSignalDoesNotReconnect() async throws {
+        let clock = TestClock()
+        let mock = MockBLEController()
+        let manager = try await makeConnectedManager(mock: mock, clock: clock)
+        await manager.startDisconnectObserver()
+
+        // User-initiated disconnect sets the suppression flag. The mock's
+        // disconnect() is a no-op, so emit the signal explicitly to mimic the
+        // real BLEController firing didDisconnectPeripheral in response.
+        await manager.disconnect()
+        let baseCount = mock.connectCallCount
+        mock.emitDisconnect()
+
+        // Advance well past the first backoff window — nothing should reconnect.
+        try await Task.sleep(for: .milliseconds(50))
+        clock.advance(by: .seconds(2))
+        try await Task.sleep(for: .milliseconds(50))
+
+        XCTAssertEqual(
+            mock.connectCallCount, baseCount,
+            "A user-initiated disconnect must not trigger auto-reconnect"
+        )
+    }
+}
+
 // MARK: - Desk Busy State Handling
 
 final class ReconnectionBusyStateIntegrationTests: XCTestCase {

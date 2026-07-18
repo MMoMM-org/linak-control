@@ -43,6 +43,30 @@ extension DeskManager {
         startReconnectionLoop()
     }
 
+    // MARK: - Disconnect Observer
+
+    /// Observes BLE peripheral-disconnect signals and routes each to
+    /// ``handleDisconnection()``, starting the backoff reconnection loop on an
+    /// unexpected drop. Call this once after actor setup (e.g. from the app
+    /// delegate), mirroring ``startWakeObserver()``.
+    ///
+    /// The observer is long-lived — it must outlive individual connections so it
+    /// keeps catching drops across reconnect cycles — so it is intentionally not
+    /// torn down by ``cancelConnectionTasks()``.
+    public func startDisconnectObserver() {
+        Task { [weak self] in
+            guard let self else { return }
+            await self.observeDisconnects()
+        }
+    }
+
+    private func observeDisconnects() async {
+        for await _ in bleController.disconnectStream {
+            guard !Task.isCancelled else { return }
+            handleDisconnection()
+        }
+    }
+
     // MARK: - Reconnection Loop
 
     private func startReconnectionLoop() {
