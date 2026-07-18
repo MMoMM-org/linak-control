@@ -22,6 +22,10 @@ public final class DeskViewModel: ObservableObject {
     @Published public var heightDisplay: String = "—"
     @Published public var isMoving: Bool = false
     @Published public var moveDirection: MoveDirection?
+
+    /// True when a movement stalled — the desk stopped responding and may need a
+    /// manual reset on the control box (E16). Cleared on the next move attempt.
+    @Published public var needsReference: Bool = false
     @Published public var presets: [PresetPosition] = (1...4).map { PresetPosition(index: $0) }
     @Published public var activePreset: Int?
     @Published public var targetPreset: Int?
@@ -365,6 +369,7 @@ public final class DeskViewModel: ObservableObject {
 
         isMoving = snapshot.isMoving
         moveDirection = snapshot.moveDirection
+        needsReference = snapshot.needsReference
 
         // Apply offset to preset heights for display.
         presets = snapshot.presets.map { preset in

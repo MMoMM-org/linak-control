@@ -1,15 +1,18 @@
 // Logger.swift
-// LinakControlKit -- Unified + file logging for debug builds.
+// LinakControlKit -- File logging for diagnostics (all build configurations).
 
 import Foundation
 
-// MARK: - File logger for debug builds
+// MARK: - File logger
 
 /// Appends timestamped lines to ~/Library/Logs/LinakControl/debug.log.
 ///
-/// All writes are serialised on a dedicated queue. The log file is
-/// created automatically on first write and truncated at 1 MB to
-/// prevent unbounded growth across debug sessions.
+/// All writes are serialised on a dedicated queue. The log file is created
+/// automatically on first write and truncated at 1 MB (rolling) to prevent
+/// unbounded growth. ``debug(_:category:)`` is active in release builds so
+/// installed apps capture diagnostics; ``trace(_:category:)`` stays DEBUG-only
+/// for high-frequency output. The log persists across app restarts — it is not
+/// reset at launch — so an intermittent fault can be captured after the fact.
 public enum FileLog {
 
     private static let queue = DispatchQueue(label: "com.linakcontrol.filelog")
@@ -34,10 +37,25 @@ public enum FileLog {
     /// Avoids file-descriptor churn at ~10Hz during desk movement.
     private static var fileHandle: FileHandle?
 
-    /// Write a single log line. No-op in release builds.
+    /// Write a single event-level log line. Active in **all** build
+    /// configurations (release included) so diagnostics — such as raw desk
+    /// status packets around an E16 fault — are captured on installed builds.
+    /// The 1 MB rolling cap keeps growth bounded, so keep this to meaningful
+    /// events; use ``trace(_:category:)`` for high-frequency per-tick output.
     public static func debug(_ message: @autoclosure () -> String, category: String = "general") {
+        append(message(), category: category)
+    }
+
+    /// Write a high-frequency (e.g. per-tick, ~10 Hz) trace line. DEBUG-only,
+    /// so it never floods the bounded release log and rolls out recent events.
+    public static func trace(_ message: @autoclosure () -> String, category: String = "general") {
         #if DEBUG
-        let text = message()
+        append(message(), category: category)
+        #endif
+    }
+
+    /// Serialises and appends one line to the log file, applying the rolling cap.
+    private static func append(_ text: String, category: String) {
         let ts = dateFormatter.string(from: Date())
         let line = "[\(ts)] [\(category)] \(text)\n"
 
@@ -52,7 +70,6 @@ public enum FileLog {
             }
             handle.write(Data(line.utf8))
         }
-        #endif
     }
 
     /// Truncates the log file. Call at app launch for a clean session.

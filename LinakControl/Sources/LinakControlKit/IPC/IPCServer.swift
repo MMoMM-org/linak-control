@@ -366,7 +366,8 @@ extension IPCServer {
             heightDisplay: heightDisplay,
             unit: config.unit.rawValue,
             presets: presets,
-            activePreset: state.activePreset
+            activePreset: state.activePreset,
+            needsReference: state.needsReference
         )
     }
 }

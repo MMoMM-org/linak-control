@@ -136,6 +136,12 @@ final class ReconnectionDuringMovementIntegrationTests: XCTestCase {
         let mock = MockBLEController()
         let manager = try await makeConnectedManager(mock: mock, clock: clock)
 
+        // Let the single buffered stationary height notification (730mm, speed 0)
+        // drain before moving — otherwise it can be processed after moveUp and
+        // clear isMoving (the finite stream then emits nothing more). No movement
+        // loop competes for the actor yet, so this is deterministic.
+        try await Task.sleep(for: .milliseconds(50))
+
         // Start a manual move to put the manager into moving state
         try await manager.moveUp(mode: .manual)
         try await Task.sleep(for: .milliseconds(50))

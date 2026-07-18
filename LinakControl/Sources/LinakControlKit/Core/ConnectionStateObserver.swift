@@ -40,11 +40,19 @@ private func observeStateStream(
 ) async {
     var previous: ConnectionState = .disconnected
     var hasEverConnected = false
+    var previousNeedsReference = false
 
     for await state in await manager.stateStream {
         guard !Task.isCancelled else { return }
 
         let current = state.connectionState
+
+        // Fire once on the rising edge of the stall/needs-reference flag.
+        if state.needsReference, !previousNeedsReference {
+            poster.postNeedsReference()
+        }
+        previousNeedsReference = state.needsReference
+
         defer { previous = current }
 
         switch (previous, current) {

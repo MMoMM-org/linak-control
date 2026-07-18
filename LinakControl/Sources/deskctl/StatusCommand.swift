@@ -38,6 +38,9 @@ struct StatusCommand: ParsableCommand {
         if !presetsLabel.isEmpty {
             print("  Presets:    \(presetsLabel)")
         }
+        if status.needsReference {
+            print("  Warning:    desk stopped moving — may need a manual reset on the control box (E16)")
+        }
     }
 
     private func formatPresets(_ presets: [PresetInfo], active: Int?, unit: String) -> String {
