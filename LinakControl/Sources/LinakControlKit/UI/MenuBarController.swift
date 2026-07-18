@@ -130,15 +130,21 @@ public final class MenuBarController: NSObject {
 
     private func updateZone1Icon() {
         guard let button = zone1StatusItem?.button else { return }
+        button.alphaValue = 1.0
+
         if viewModel.needsReference {
             // Persistent fault indicator — visible without opening the popover or
             // catching the one-shot notification. Hover shows the specific cause.
-            button.image = NSImage(
+            // Use a self-coloured (non-template) orange symbol so it renders
+            // regardless of the status-bar tint.
+            let config = NSImage.SymbolConfiguration(paletteColors: [.systemOrange])
+            let warning = NSImage(
                 systemSymbolName: "exclamationmark.triangle.fill",
                 accessibilityDescription: "Desk fault"
-            )
-            button.contentTintColor = .systemOrange
-            button.alphaValue = 1.0
+            )?.withSymbolConfiguration(config)
+            warning?.isTemplate = false
+            button.image = warning
+            button.contentTintColor = nil
             button.toolTip = viewModel.faultMessage
         } else {
             button.image = zone1Image(for: viewModel.connectionState)

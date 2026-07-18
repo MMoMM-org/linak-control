@@ -139,7 +139,17 @@ extension DeskManager {
                 "preset stall: height unchanged for \(stallTimeout) — stopping recall; desk may need a reset",
                 category: "movement"
             )
-            updateState { $0.needsReference = true }
+            // Set the full stopped state immediately so the UI is consistent at
+            // the moment of the stall — a stalled desk sends no more height
+            // notifications, so we must not rely on clearPresetMoveState's
+            // delayed settle to clear isMoving.
+            updateState {
+                $0.isMoving = false
+                $0.moveDirection = nil
+                $0.speedMMS = 0
+                $0.targetPreset = nil
+                $0.needsReference = true
+            }
         }
         await clearPresetMoveState()
     }

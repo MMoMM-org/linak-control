@@ -147,6 +147,8 @@ final class DeskManagerStallWatchdogTests: XCTestCase {
 
         let state = await setup.manager.currentState
         XCTAssertTrue(state.needsReference, "Preset recall stall must raise needsReference")
+        XCTAssertFalse(state.isMoving, "Preset stall must clear isMoving immediately, not via the delayed settle")
+        XCTAssertNil(state.targetPreset, "Preset stall must clear the target")
         XCTAssertNil(state.faultCode, "A timing stall carries no fault code")
 
         // Let clearPresetMoveState's settle sleep finish.
