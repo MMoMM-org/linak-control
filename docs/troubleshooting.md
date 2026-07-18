@@ -64,7 +64,9 @@ The CLI installed somewhere your shell does not search.
 
 **Desk stops mid-move and the popover shows a warning (control box shows E16 or E26)**
 
-When a move (manual, auto, or preset recall) does not make the desk move, the app stops sending move commands so it no longer fights the module, and warns you three ways: the **menu bar icon turns into an orange warning triangle** (hover it for the cause), a banner appears in the popover, and a macOS notification is posted. It reacts instantly if the desk reports a fault on its status channel, and otherwise after ~2 seconds of no movement (a timing backstop).
+When a move (manual, auto, or preset recall) does not make the desk move, the app **stands down**: it stops sending commands and **disconnects from the desk** so you can operate the control box without the app interfering (it kept reconnecting and re-handshaking otherwise). It warns you three ways: the **menu bar icon turns into an orange warning triangle** (hover it for the cause), a banner appears in the popover, and a macOS notification is posted. It reacts instantly if the desk reports a fault on its status channel, and otherwise after ~2 seconds of no movement (a timing backstop).
+
+**To resume:** initialise / reset the desk on the control box, then either click **Reconnect** in the popover, or simply trigger any movement from the app — a move **auto-reconnects** first, then runs. (You can also disconnect manually any time via the bolt-slash button in the popover footer.)
 
 The message is specific to what the control box reports:
 

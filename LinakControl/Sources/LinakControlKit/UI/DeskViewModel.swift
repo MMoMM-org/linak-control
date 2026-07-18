@@ -249,6 +249,14 @@ public final class DeskViewModel: ObservableObject {
         }
     }
 
+    /// Manually disconnects from the desk (releases BLE, suppresses reconnect).
+    /// Use to free the desk for manual operation; reconnect via `retryConnection()`
+    /// or simply by triggering a movement (which auto-reconnects).
+    public func disconnectFromDesk() {
+        FileLog.debug("disconnectFromDesk", category: "ui")
+        Task { await deskManager.disconnect() }
+    }
+
     /// Persists the start-at-login preference and registers or unregisters the login item.
     ///
     /// Errors from SMAppService (e.g. duplicate registration) are silently ignored;
