@@ -223,6 +223,16 @@ final class ParseDeskStatusTests: XCTestCase {
         XCTAssertEqual(DeskProtocol.parseDeskStatus(makeData([0x01, 0x00, 0x17])), .fault(code: 0x17))
     }
 
+    func testInitialiseFaultPulse() {
+        // Captured: control box asking to Initialise -> [01 00 1d]
+        XCTAssertEqual(DeskProtocol.parseDeskStatus(makeData([0x01, 0x00, 0x1d])), .fault(code: 0x1d))
+    }
+
+    func testDescribeAndSummariseInitialiseCode() {
+        XCTAssertTrue(DeskProtocol.describeFault(code: 0x1d).lowercased().contains("initialise"))
+        XCTAssertTrue(DeskProtocol.faultSummary(code: 0x1d).lowercased().contains("re-initialised"))
+    }
+
     func testEmptyPayloadIsOk() {
         XCTAssertEqual(DeskProtocol.parseDeskStatus(makeData([])), .ok)
     }

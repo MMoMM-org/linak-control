@@ -129,8 +129,23 @@ public final class MenuBarController: NSObject {
     }
 
     private func updateZone1Icon() {
-        zone1StatusItem?.button?.image = zone1Image(for: viewModel.connectionState)
-        zone1StatusItem?.button?.alphaValue = viewModel.connectionState == .connected ? 1.0 : 0.7
+        guard let button = zone1StatusItem?.button else { return }
+        if viewModel.needsReference {
+            // Persistent fault indicator — visible without opening the popover or
+            // catching the one-shot notification. Hover shows the specific cause.
+            button.image = NSImage(
+                systemSymbolName: "exclamationmark.triangle.fill",
+                accessibilityDescription: "Desk fault"
+            )
+            button.contentTintColor = .systemOrange
+            button.alphaValue = 1.0
+            button.toolTip = viewModel.faultMessage
+        } else {
+            button.image = zone1Image(for: viewModel.connectionState)
+            button.contentTintColor = nil
+            button.alphaValue = viewModel.connectionState == .connected ? 1.0 : 0.7
+            button.toolTip = nil
+        }
     }
 
     private func updateZone2Visibility() {

@@ -79,6 +79,8 @@ public enum DeskProtocol {
     public static func describeFault(code: UInt8) -> String {
         let hex = String(format: "0x%02x", code)
         switch code {
+        case 0x1d:
+            return "\(hex): the desk lost its position reference and must be re-initialised (the control box shows Initialise)"
         case 0x1e:
             return "E16 (\(hex)): control box reports an illegal key combination — the desk needs a reset / re-reference"
         case 0x17:
@@ -91,6 +93,7 @@ public enum DeskProtocol {
     /// Short user-facing summary for a fault code (for notifications / banners).
     public static func faultSummary(code: UInt8?) -> String {
         switch code {
+        case 0x1d: return "The desk needs to be re-initialised — hold DOWN until it reaches the bottom and resets."
         case 0x1e: return "The desk needs a reset on the control box (E16)."
         case 0x17: return "Possible hardware fault in a desk leg — check the cables (E26)."
         default:   return "The desk stopped responding."

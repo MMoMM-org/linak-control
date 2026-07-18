@@ -64,11 +64,12 @@ The CLI installed somewhere your shell does not search.
 
 **Desk stops mid-move and the popover shows a warning (control box shows E16 or E26)**
 
-When a move (manual, auto, or preset recall) does not make the desk move, the app stops sending move commands so it no longer fights the module, and shows a warning banner plus a macOS notification. It reacts two ways: instantly if the desk reports a fault on its status channel, and otherwise after ~2 seconds of no movement (a timing backstop).
+When a move (manual, auto, or preset recall) does not make the desk move, the app stops sending move commands so it no longer fights the module, and warns you three ways: the **menu bar icon turns into an orange warning triangle** (hover it for the cause), a banner appears in the popover, and a macOS notification is posted. It reacts instantly if the desk reports a fault on its status channel, and otherwise after ~2 seconds of no movement (a timing backstop).
 
 The message is specific to what the control box reports:
 
-- **E16 — "needs a reset on the control box".** The control box read the Bluetooth move commands as an illegal key combination and stopped. This is not a hardware fault. Re-reference the desk manually: hold the **down** button until the desk reaches its lowest position and resets (follow your LINAK control box's re-initialisation procedure). Movement from the app then works normally — the warning clears on your next move.
+- **Initialise / re-initialisation required.** The desk lost its position reference and asks to be re-initialised. Hold the **down** button until the desk reaches its lowest position and resets (follow your LINAK control box's initialisation procedure). Movement from the app then works normally — the warning clears on your next move.
+- **E16 — "needs a reset on the control box".** The control box read the Bluetooth move commands as an illegal key combination and stopped. This is not a hardware fault. Re-reference the desk manually as above. 
 - **E26 — "possible hardware fault in a desk leg (check the cables)".** The control box reports channel 4 (a leg motor) as missing. If this recurs, check the motor cable connections to the legs; a persistent E26 points at a cable or motor, not the app.
 - The app also shows a generic "stopped responding" warning if you hold a direction into the desk's **physical end-stop** (the height simply stops changing). That is harmless — just release the button.
 
