@@ -50,6 +50,7 @@ private func observeStateStream(
         // Fire once on the rising edge of the stall/needs-reference flag, with a
         // message specific to the decoded fault code when the desk pushed one.
         if state.needsReference, !previousNeedsReference {
+            FileLog.debug("posting needs-reference notification (faultCode: \(state.faultCode.map { String(format: "0x%02x", $0) } ?? "none"))", category: "core")
             poster.postNeedsReference(body: DeskProtocol.faultSummary(code: state.faultCode))
         }
         previousNeedsReference = state.needsReference

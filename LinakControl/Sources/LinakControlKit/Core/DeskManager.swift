@@ -31,10 +31,37 @@ public actor DeskManager {
 
     // MARK: - State observation
 
-    private let stateContinuation: AsyncStream<DeskState>.Continuation
+    /// One continuation per active subscriber. A single `AsyncStream` delivers
+    /// each element to only one consumer, so the UI and the notification
+    /// observer must each get their own stream — otherwise they split the
+    /// snapshots between them and the observer misses events (e.g. the
+    /// needsReference edge → no notification).
+    private var stateSubscribers: [UUID: AsyncStream<DeskState>.Continuation] = [:]
 
-    /// Emits a new `DeskState` snapshot every time state changes.
-    public let stateStream: AsyncStream<DeskState>
+    /// A fresh, independent stream of `DeskState` snapshots for one subscriber.
+    /// Each access registers a new subscriber (multicast) and immediately
+    /// delivers the current snapshot. Every subscriber receives every update.
+    public var stateStream: AsyncStream<DeskState> {
+        let (stream, continuation) = AsyncStream<DeskState>.makeStream()
+        let id = UUID()
+        stateSubscribers[id] = continuation
+        continuation.yield(state)
+        continuation.onTermination = { [weak self] _ in
+            Task { await self?.removeStateSubscriber(id) }
+        }
+        return stream
+    }
+
+    private func removeStateSubscriber(_ id: UUID) {
+        stateSubscribers[id] = nil
+    }
+
+    /// Fans the current state out to every active subscriber.
+    private func yieldState() {
+        for continuation in stateSubscribers.values {
+            continuation.yield(state)
+        }
+    }
 
     // MARK: - Init
 
@@ -47,12 +74,6 @@ public actor DeskManager {
         self.configStore = configStore
         self.clock = clock
         self.state = DeskState()
-
-        var cont: AsyncStream<DeskState>.Continuation!
-        stateStream = AsyncStream { continuation in
-            cont = continuation
-        }
-        stateContinuation = cont
     }
 
     // MARK: - State access
@@ -186,7 +207,7 @@ public actor DeskManager {
     public func updateSettings(_ config: AppConfig) throws {
         try configStore.save(config)
         applyPresetLabels(from: config)
-        stateContinuation.yield(state)
+        yieldState()
     }
 }
 
@@ -197,7 +218,7 @@ extension DeskManager {
     /// Applies a mutation closure to `state` and yields the updated snapshot.
     func updateState(_ mutation: (inout DeskState) -> Void) {
         mutation(&state)
-        stateContinuation.yield(state)
+        yieldState()
     }
 
     /// Populates state from a handshake result and persists pairing info.
@@ -235,7 +256,7 @@ extension DeskManager {
         }
 
         persistPairingInfo(peripheralId: peripheralId, existingConfig: config, deskOffsetMM: offset)
-        stateContinuation.yield(state)
+        yieldState()
     }
 
     /// Saves paired desk UUID and offset to config.
@@ -336,7 +357,7 @@ extension DeskManager {
             presets: state.presets,
             isMoving: state.isMoving
         )
-        stateContinuation.yield(state)
+        yieldState()
     }
 
     /// Maps a speed value to a move direction, or nil when stationary.
@@ -354,7 +375,7 @@ extension DeskManager {
             fresh.presets[i].label = presetLabel(index: i + 1, config: config)
         }
         state = fresh
-        stateContinuation.yield(state)
+        yieldState()
     }
 
     /// Refreshes preset labels in the current state from a config snapshot.
