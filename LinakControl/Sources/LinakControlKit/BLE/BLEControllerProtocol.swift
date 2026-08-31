@@ -54,6 +54,14 @@ public protocol BLEControllerProtocol: AnyObject, Sendable {
     /// Emits BLE hardware state changes.
     var stateStream: AsyncStream<BLEState> { get }
 
+    /// Emits once each time the connected peripheral unexpectedly disconnects.
+    ///
+    /// Distinct from ``stateStream`` (hardware power state): this fires on a
+    /// *peripheral* drop — desk power-cycle, out of range, or system sleep — so
+    /// ``DeskManager`` can start its reconnection loop. Fires for user-initiated
+    /// disconnects too; the reconnection guard suppresses those downstream.
+    var disconnectStream: AsyncStream<Void> { get }
+
     /// Scans for peripherals advertising ``DeskUUID/controlService``.
     ///
     /// The stream terminates when ``stopScan()`` is called.

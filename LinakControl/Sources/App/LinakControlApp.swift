@@ -46,6 +46,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         connectionObserverTask = observer.start()
 
+        // Bridge unexpected BLE drops to the reconnection loop, and reconnect
+        // after the Mac wakes from sleep. Without this wiring an unexpected drop
+        // leaves the app in a stale .connected state with no auto-reconnect.
+        Task {
+            await deskManager.startDisconnectObserver()
+            await deskManager.startWakeObserver()
+        }
+
         hotkeyManager = HotkeyManager(deskManager: deskManager, configStore: configStore)
 
         Task {

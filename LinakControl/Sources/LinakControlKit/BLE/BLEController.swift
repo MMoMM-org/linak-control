@@ -27,6 +27,9 @@ public final class BLEController: NSObject, BLEControllerProtocol, @unchecked Se
     // State stream
     private var stateContinuation: AsyncStream<BLEState>.Continuation?
 
+    // Disconnect signal stream
+    private var disconnectContinuation: AsyncStream<Void>.Continuation?
+
     // Write continuations keyed by characteristic UUID
     private var writeContinuations: [CBUUID: CheckedContinuation<Void, Error>] = [:]
 
@@ -46,6 +49,10 @@ public final class BLEController: NSObject, BLEControllerProtocol, @unchecked Se
 
     public let stateStream: AsyncStream<BLEState>
 
+    // MARK: - BLEControllerProtocol — disconnectStream
+
+    public let disconnectStream: AsyncStream<Void>
+
     // MARK: - Init
 
     override public init() {
@@ -53,8 +60,13 @@ public final class BLEController: NSObject, BLEControllerProtocol, @unchecked Se
         stateStream = AsyncStream { continuation in
             stateCont = continuation
         }
+        var disconnectCont: AsyncStream<Void>.Continuation!
+        disconnectStream = AsyncStream { continuation in
+            disconnectCont = continuation
+        }
         super.init()
         stateContinuation = stateCont
+        disconnectContinuation = disconnectCont
         centralManager = CBCentralManager(delegate: self, queue: bleQueue)
     }
 
@@ -344,6 +356,10 @@ extension BLEController: CBCentralManagerDelegate {
     ) {
         FileLog.debug("didDisconnect: '\(peripheral.name ?? "unknown")' error=\(error?.localizedDescription ?? "none")", category: "ble")
         cleanUpOnDisconnect()
+        // Signal DeskManager after BLE-local state is cleared, so its reconnection
+        // loop starts against a clean slate. User-initiated disconnects also fire
+        // here; the reconnection guard (isUserInitiatedDisconnect) suppresses them.
+        disconnectContinuation?.yield(())
     }
 }
 

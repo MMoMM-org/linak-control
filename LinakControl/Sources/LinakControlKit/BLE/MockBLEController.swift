@@ -80,6 +80,17 @@ public final class MockBLEController: BLEControllerProtocol, @unchecked Sendable
         stateContinuation.yield(state)
     }
 
+    // MARK: - BLEControllerProtocol — disconnectStream
+
+    public let disconnectStream: AsyncStream<Void>
+
+    private let disconnectContinuation: AsyncStream<Void>.Continuation
+
+    /// Simulate an unexpected peripheral disconnect on ``disconnectStream``.
+    public func emitDisconnect() {
+        disconnectContinuation.yield(())
+    }
+
     // MARK: - Init
 
     public init() {
@@ -88,6 +99,12 @@ public final class MockBLEController: BLEControllerProtocol, @unchecked Sendable
             cont = continuation
         }
         stateContinuation = cont
+
+        var disconnectCont: AsyncStream<Void>.Continuation!
+        disconnectStream = AsyncStream { continuation in
+            disconnectCont = continuation
+        }
+        disconnectContinuation = disconnectCont
     }
 
     // MARK: - BLEControllerProtocol — scan
