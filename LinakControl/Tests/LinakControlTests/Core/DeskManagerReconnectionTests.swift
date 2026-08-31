@@ -304,6 +304,77 @@ final class DeskManagerHeartbeatTests: XCTestCase {
         await manager.disconnect()
     }
 
+    /// Issue #14: 0x0031 is the reference-input characteristic and the desk
+    /// reads a write there as a target position. While the desk asks to be
+    /// re-referenced the user is running the initialisation procedure on the
+    /// control box, and any write aborts it — so the heartbeat must go quiet.
+    ///
+    /// Note both pre-existing guards are inactive here: the stall clears
+    /// `isMoving`, and `moveUp` has just recorded a user action. This test
+    /// therefore isolates the `needsReference` guard.
+    func testHeartbeatPausesWhileDeskNeedsReference() async throws {
+        let clock = TestClock()
+        let mock = MockBLEController()
+        let manager = try await makeConnectedManager(mock: mock, clock: clock)
+
+        // Force a stall so the desk asks to be re-referenced.
+        try await manager.moveUp(mode: .manual)
+        try await Task.sleep(for: .milliseconds(50))
+        clock.advance(by: .milliseconds(2100))
+        await waitFor { await manager.currentState.needsReference }
+
+        let moving = await manager.currentState.isMoving
+        XCTAssertFalse(moving, "Precondition: the stall must have cleared isMoving")
+
+        mock.writtenData.removeAll()
+        try await Task.sleep(for: .milliseconds(50))
+
+        // The control box needs the channel free for the whole procedure.
+        for _ in 0..<3 {
+            clock.advance(by: .seconds(1))
+            try await Task.sleep(for: .milliseconds(50))
+        }
+
+        XCTAssertEqual(
+            heartbeatWrites(in: mock), 0,
+            "Heartbeat must stay silent while the desk needs a re-reference"
+        )
+
+        await manager.disconnect()
+    }
+
+    /// The suppression must not be permanent — otherwise the desk would sleep.
+    /// The next move from the app clears `needsReference`, and once that move
+    /// ends the keep-alive resumes.
+    func testHeartbeatResumesAfterNextMoveClearsNeedsReference() async throws {
+        let clock = TestClock()
+        let mock = MockBLEController()
+        let manager = try await makeConnectedManager(mock: mock, clock: clock)
+
+        try await manager.moveUp(mode: .manual)
+        try await Task.sleep(for: .milliseconds(50))
+        clock.advance(by: .milliseconds(2100))
+        await waitFor { await manager.currentState.needsReference }
+
+        // A new move clears the flag optimistically; stopping it clears isMoving.
+        try await manager.moveUp(mode: .manual)
+        try await manager.stop()
+        await waitFor { await manager.currentState.needsReference == false }
+
+        mock.writtenData.removeAll()
+        try await Task.sleep(for: .milliseconds(50))
+
+        clock.advance(by: .seconds(1))
+        try await Task.sleep(for: .milliseconds(50))
+
+        XCTAssertEqual(
+            heartbeatWrites(in: mock), 1,
+            "Heartbeat must resume once the desk no longer needs a re-reference"
+        )
+
+        await manager.disconnect()
+    }
+
     func testHeartbeatPausesAfter10MinutesOfIdle() async throws {
         let clock = TestClock()
         let mock = MockBLEController()
