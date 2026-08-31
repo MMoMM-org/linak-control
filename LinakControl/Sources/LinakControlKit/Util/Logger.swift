@@ -25,7 +25,22 @@ public enum FileLog {
         return f
     }()
 
+    /// True when this process is an XCTest runner. The app target does not link
+    /// XCTest, so it is false in both debug and release app builds.
+    ///
+    /// - Note: the obvious `XCTestConfigurationFilePath` environment variable is
+    ///   **not** set under `swift test` (verified against this package), so the
+    ///   linked-class check is the reliable detection here.
+    static let isRunningUnderTest = NSClassFromString("XCTestCase") != nil
+
     private static var logURL: URL? = {
+        // Never touch the user's real diagnostic log from a test process
+        // (issue #18). The suite would otherwise interleave fixture events —
+        // including fabricated E16/E26 faults that never happened on any
+        // hardware — into the very file docs/troubleshooting.md asks users to
+        // capture and send for a bug report.
+        guard !isRunningUnderTest else { return nil }
+
         let dir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Logs/LinakControl", isDirectory: true)
         try? FileManager.default.createDirectory(
@@ -34,6 +49,12 @@ public enum FileLog {
         )
         return dir.appendingPathComponent("debug.log")
     }()
+
+    /// Blocks until every queued write has been flushed. Test-only affordance —
+    /// writes are otherwise fire-and-forget so logging never stalls the caller.
+    static func flushForTesting() {
+        queue.sync {}
+    }
 
     /// Persistent file handle — opened once, reused for all writes.
     /// Avoids file-descriptor churn at ~10Hz during desk movement.
