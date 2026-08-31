@@ -15,3 +15,10 @@ LinakControl/.build/
 .mcp.json
 /generated-images/
 .DS_Store
+
+# Claude Code session continuity — local scratch, not for consumers
+.claude/.session-checkpoint.md
+.claude/plans/
+/claude-docker/
+/claude-docker-home/
+/begin-code.sh
