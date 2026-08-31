@@ -2,7 +2,7 @@
 <!-- Known issues and proven fixes. Updated: 2026-08-31 -->
 
 <!-- 2026-07-18 -->
-## Cannot initialise the desk while the app runs -> stand-down on fault -- Status: resolved
+## Cannot initialise the desk while the app runs -> stand-down on fault -- Status: superseded, see issue #14 entry below
 The user couldn't do the manual re-reference on the control box while linak-control was connected: the app kept reconnecting + re-running the handshake (wake-up + USER_ID write + DPG queries), interfering with the initialisation. Note: at the time production auto-reconnect was NOT wired -- the interference came from launch auto-connect + re-handshakes. WIRED since issue #6 / PR #7: `BLEController.didDisconnectPeripheral` yields on `disconnectStream`, `DeskManager.startDisconnectObserver` routes it to `handleDisconnection`, both observers started at app launch. The `isUserInitiatedDisconnect` guard still keeps a stand-down down. Fix: on the `needsReference` rising edge, `ConnectionStateObserver` calls `DeskManager.standDown()` -- like `disconnect()` (releases BLE, `isUserInitiatedDisconnect=true`) but PRESERVES `needsReference`/`faultCode` (does NOT use `resetToDisconnected`, which wipes them). So on ANY fault (decoded E16/E26/Initialise OR timing stall) the app disconnects and stands down; the desk is free to initialise. Recovery: `ensureConnectedForAction()` replaces `requireConnected()` in `startMovement`/`executeGoToPreset` -> a move auto-reconnects to `pairedDeskUUID` first; plus a manual Disconnect button (popover footer) + Reconnect (retryConnection). `connect()` success (applyHandshakeResult) clears the preserved fault. Popover DisconnectedContent shows the fault message when needsReference survives. Menu-bar warning icon works in the disconnected state too.
 
 <!-- 2026-07-18 -->
@@ -33,7 +33,11 @@ Writing incorrect USER_ID data back to the desk corrupted its user profile, rese
 All DPG queries failed because: (a) commands were 2 bytes instead of required 3 bytes, and (b) USER_ID session activation was missing. Fix: 3-byte read format [0x7F, cmd, 0x00] + USER_ID read+write before queries.
 
 ## Heartbeat disrupts movement -- Status: resolved
-Heartbeat [0x01 0x80] writes to same characteristic (0x0031) as moveTo targets. Desk interpreted heartbeat as target position ~33m, causing erratic movement. Fix: suppress heartbeat when state.isMoving is true.
+Heartbeat [0x01 0x80] writes to same characteristic (0x0031) as moveTo targets. Desk interpreted heartbeat as target position ~33m, causing erratic movement. Fix: suppress heartbeat when state.isMoving is true. NOTE: `isMoving` alone was not enough -- see the `needsReference` suppression below (issue #14).
+
+<!-- 2026-08-31 -->
+## Heartbeat blocks manual re-initialisation -- Status: resolved (issue #14)
+The 2026-07-18 "cannot initialise while the app runs" entry above was only half-fixed. `standDown()` fires solely on the RISING edge of `needsReference` (`ConnectionStateObserver.swift:55`), so any state where the app is connected while the flag is already set kept the 1 Hz heartbeat running -- and 0x0031 is the reference-input characteristic the desk reads as a target position (see the entry above). The `isMoving` guard does not cover the init procedure: it goes false the instant the desk reaches the bottom and stops, which is exactly when the control box waits to complete the re-reference. Symptom: desk drives down, E16 persists, control box keeps demanding initialisation. Confirmed on hardware 2026-08-31 -- quitting the app made the initialisation succeed. Fix: `shouldSendHeartbeat()` gains `guard !state.needsReference`. The flag clears on the next app-initiated move, so keep-alive resumes on its own. `isHeartbeatSuppressed()` (used by `ensureAwake`) deliberately NOT changed -- needing a re-reference must not be read as "desk asleep".
 
 ## Height validation rejects real values -- Status: resolved
 validHeightRange was 500-1500mm (absolute), but height characteristic reports raw values (0-650mm). All real desk heights were rejected. Fix: widen to 0-7000mm for raw values.

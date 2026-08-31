@@ -274,6 +274,19 @@ extension DeskManager {
         // Interleaving heartbeats disrupts the move-to target.
         guard !state.isMoving else { return false }
 
+        // Suppress heartbeat while the desk asks to be re-referenced (issue
+        // #14). The user is about to run the initialisation procedure from the
+        // control box, and 0x0031 is the reference-input characteristic — the
+        // desk reads a write there as a target position, which aborts the
+        // procedure. `isMoving` alone does not cover this: it goes false the
+        // moment the desk reaches the bottom and stops, which is exactly when
+        // the control box is waiting to complete the re-reference.
+        //
+        // The flag clears on the next move started from the app
+        // (`startMovement`), so normal keep-alive resumes as soon as the user
+        // drives the desk again.
+        guard !state.needsReference else { return false }
+
         guard let last = lastUserAction else {
             return true  // no action yet — keep desk awake by default
         }
